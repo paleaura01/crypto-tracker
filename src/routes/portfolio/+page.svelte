@@ -1,29 +1,23 @@
 <script>
-  let address   = '';
-  let chain     = 'ethereum';    // keep “ethereum” in the dropdown
-  let balances  = [];
-  let loading   = false;
-  let error     = '';
+  let address  = '';
+  let loading  = false;
+  let error    = '';
+  let portfolio = [];
 
-  async function loadBalances() {
+  async function loadAll() {
     if (!address) {
       error = 'Enter a wallet address';
       return;
     }
     loading = true;
-    error = '';
-    balances = [];
-
+    error   = '';
     try {
-      const res = await fetch(
-        `/api/wallet-address/moralis?address=${encodeURIComponent(address)}&chain=${chain}`
-      );
+      const res = await fetch(`/api/combined-portfolio?address=${encodeURIComponent(address)}`);
       if (!res.ok) throw new Error(await res.text());
-      balances = await res.json();
-      console.log('✅ got balances:', balances);
+      portfolio = await res.json();
     } catch (e) {
       console.error(e);
-      error = 'Could not load balances';
+      error = 'Could not load portfolio';
     } finally {
       loading = false;
     }
@@ -32,32 +26,22 @@
 
 <div>
   <input bind:value={address} placeholder="0x… address" />
-
-  <select bind:value={chain}>
-    <option value="ethereum">Ethereum</option>
-    <option value="polygon">Polygon</option>
-    <option value="bsc">BSC</option>
-    <!-- add other EVM chains as you like -->
-  </select>
-
-  <button on:click={loadBalances} disabled={loading}>
-    {#if loading}Loading…{:else}Load Balances{/if}
+  <button on:click={loadAll} disabled={loading}>
+    {#if loading}Loading…{:else}Load All Balances{/if}
   </button>
 
   {#if error}
     <p class="error">{error}</p>
-  {:else if balances.length}
+  {:else if portfolio.length}
     <ul>
-      {#each balances as { symbol, balance, usdValue }}
+      {#each portfolio as { chain, symbol, balance, price, totalValue }}
         <li>
-          <strong>{symbol}</strong>: {balance.toFixed(6)}
-          {#if usdValue != null}
-            &nbsp;(≈${usdValue.toFixed(2)})
-          {/if}
+          <strong>{symbol}</strong> on {chain}: {balance}
+          @ ${price} → $ {totalValue.toFixed(2)}
         </li>
       {/each}
     </ul>
   {:else if !loading}
-    <p>No balances to display.</p>
+    <p>No tokens found in Coingecko.</p>
   {/if}
 </div>

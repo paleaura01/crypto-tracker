@@ -1,0 +1,957 @@
+[
+  {
+    "chain": "eth",
+    "symbol": "ETH",
+    "balance": 0.000013249070247
+  },
+  {
+    "chain": "polygon",
+    "symbol": "POL",
+    "balance": 0.07829764925349099
+  },
+  {
+    "chain": "polygon",
+    "symbol": "0Bets.io",
+    "balance": 3000000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "GLM",
+    "balance": 1.576919207365995
+  },
+  {
+    "chain": "polygon",
+    "symbol": "WETH",
+    "balance": 9.26483915243e-7
+  },
+  {
+    "chain": "polygon",
+    "symbol": "MDUS",
+    "balance": 0.25
+  },
+  {
+    "chain": "polygon",
+    "symbol": "RISY",
+    "balance": 100
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim [airdrop.hair]to earn up to $5000 WLD",
+    "balance": 50
+  },
+  {
+    "chain": "polygon",
+    "symbol": "$Visit Reward at [ airdrop.li ]",
+    "balance": 600
+  },
+  {
+    "chain": "polygon",
+    "symbol": "TAIKO Link to Сlaim : https://dtaiko.xyz",
+    "balance": 1e-18
+  },
+  {
+    "chain": "polygon",
+    "symbol": "ETH AT [adrp-ether.lol]",
+    "balance": 5
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit [5000usdc.org] to claim Airdrop",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "POL",
+    "balance": 0.07829764925349099
+  },
+  {
+    "chain": "polygon",
+    "symbol": "3000MATIC Reward at matics.vip",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit https://matic-claims.com to Claim",
+    "balance": 2000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "!Ads BTC Casino www.MaticSlot.io",
+    "balance": 69.69
+  },
+  {
+    "chain": "polygon",
+    "symbol": "visit [ erc20.lol ] to earn up to 1 eth",
+    "balance": 1e-18
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Fyde Points - www.fyde.cc",
+    "balance": 104745
+  },
+  {
+    "chain": "polygon",
+    "symbol": "MNEP",
+    "balance": 300000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "MATICSWAP.NET",
+    "balance": 5800
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim on https://matic-claims.com",
+    "balance": 2000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "MORSE- Reveal yours https://morsenft.com",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Ads: BNB Casino www.MaticSlot.io",
+    "balance": 69.69
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim on: venom-foundations.net/?claim",
+    "balance": 100000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "LELX.io",
+    "balance": 43557.2
+  },
+  {
+    "chain": "polygon",
+    "symbol": "AeFX.io",
+    "balance": 799999.9999999999
+  },
+  {
+    "chain": "polygon",
+    "symbol": "visit [ erc20.lol ] to earn up to 1 eth",
+    "balance": 1e-18
+  },
+  {
+    "chain": "polygon",
+    "symbol": "5ETH at [web3eth.vip]",
+    "balance": 5
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Dove",
+    "balance": 6.54725705507972
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Fyde Points - www.fyde.pw",
+    "balance": 153250
+  },
+  {
+    "chain": "polygon",
+    "symbol": "ACCESS [ETHENA-ETHER.COM] TO CLAIM",
+    "balance": 5861
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit [5000usdc.org] to claim Airdrop",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "claim $foxy at   me-qr.com/sh8qCZ0Z",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit Tether.re to claim 10000 Rewards",
+    "balance": 900000000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "YOUMEME",
+    "balance": 0.1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit steth.cc to swap Reward",
+    "balance": 900000000000000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "5ETH at [web3eth.vip]",
+    "balance": 5
+  },
+  {
+    "chain": "polygon",
+    "symbol": "UNC - Claim: t.ly/UNC",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "claim $foxy at   me-qr.com/7esXbQ4l",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "polygon",
+    "symbol": "wHEX",
+    "balance": 172800
+  },
+  {
+    "chain": "polygon",
+    "symbol": "ETH AT [adrp-ether.lol]",
+    "balance": 5
+  },
+  {
+    "chain": "polygon",
+    "symbol": "visit [layerzerowork.com] to earn up to 12,000,000 $ZRO",
+    "balance": 1e-18
+  },
+  {
+    "chain": "polygon",
+    "symbol": "0Bets.io",
+    "balance": 3000000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit shiba.claimreward.org to claim reward",
+    "balance": 5000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "DxDex.io",
+    "balance": 799999.9999999999
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Ads: SOL Casino www.MaticSlot.io",
+    "balance": 69.69
+  },
+  {
+    "chain": "polygon",
+    "symbol": "ACCESS [ STETH.AC ] TO CLAIM AIRDROP",
+    "balance": 35800
+  },
+  {
+    "chain": "polygon",
+    "symbol": "PolygonClassics.com",
+    "balance": 1497
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit usdtg.org to claim rewards!",
+    "balance": 3000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "5000usdt.com",
+    "balance": 2
+  },
+  {
+    "chain": "polygon",
+    "symbol": "BOSQUE",
+    "balance": 1000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit [10BNB.US] to claim rewards",
+    "balance": 10
+  },
+  {
+    "chain": "polygon",
+    "symbol": "VISIT [ layerzero.beauty ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Ads: POL Casino www.MaticSlot.io",
+    "balance": 69.69
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim on https://matic-claims.com",
+    "balance": 2000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "MaticSlot",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim on chain.link-claim.ltd",
+    "balance": 600
+  },
+  {
+    "chain": "polygon",
+    "symbol": "UЅDС - [ t.ly/USPOOL ] - *claim until 12.04.25",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "5ETH voucher at [adrp-ether.xyz]",
+    "balance": 5
+  },
+  {
+    "chain": "polygon",
+    "symbol": "claim $foxy at   me-qr.com/Z87hCU2n",
+    "balance": 10195
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit USD.AC to claim reward",
+    "balance": 10000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "5 ETH AT ETHERI.ORG",
+    "balance": 5
+  },
+  {
+    "chain": "polygon",
+    "symbol": "FlowDAO.io",
+    "balance": 799999.9999999999
+  },
+  {
+    "chain": "polygon",
+    "symbol": "$ Free Claim and Play",
+    "balance": 500
+  },
+  {
+    "chain": "polygon",
+    "symbol": "!Ads ETH Casino www.MaticSlot.io",
+    "balance": 69.69
+  },
+  {
+    "chain": "polygon",
+    "symbol": "(ACCESS {10000USDT.COM} TO CLAIM YOUR TOKENS)",
+    "balance": 10000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Reward at 1000usdc.lol",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim [airdrop.hair]to earn up to $5000 WLD",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "LiquidEther rewards on https://stkether.com",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit rocketpool.win to claim 10 rETH.",
+    "balance": 900000000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "claim $foxy at   me-qr.com/KiXzv9PM",
+    "balance": 12499.999999999998
+  },
+  {
+    "chain": "polygon",
+    "symbol": "matic-rewards.xyz",
+    "balance": 800
+  },
+  {
+    "chain": "polygon",
+    "symbol": "View Airdrops at https://airdapp.net",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim: https://wbtc.win",
+    "balance": 20
+  },
+  {
+    "chain": "polygon",
+    "symbol": "HOPE",
+    "balance": 0.6411734320502979
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Zers.io",
+    "balance": 11287
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit AAEV.AC to claim reward tokens.",
+    "balance": 900000000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "claim $foxy at   me-qr.com/sh8qCZ0Z",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit Chain-Link.ltd",
+    "balance": 900
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Draf.io",
+    "balance": 288101
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Claim [airdrop.hair]to earn up to $5000 WLD",
+    "balance": 33
+  },
+  {
+    "chain": "polygon",
+    "symbol": "$ YOUR LIDO ON:lid-ethen.com @",
+    "balance": 14000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit https://matic-claims.com to Claim",
+    "balance": 3000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit Rocketpool.win to claim reward.",
+    "balance": 9000000000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Reward at 5000usdt.com",
+    "balance": 1
+  },
+  {
+    "chain": "polygon",
+    "symbol": "Visit https://matic-claims.com to Claim",
+    "balance": 2000
+  },
+  {
+    "chain": "polygon",
+    "symbol": "dQUICK",
+    "balance": 0.000048310432302362
+  },
+  {
+    "chain": "bsc",
+    "symbol": "BNB",
+    "balance": 0.00005258
+  },
+  {
+    "chain": "bsc",
+    "symbol": "JMPT",
+    "balance": 2.536639579401025
+  },
+  {
+    "chain": "bsc",
+    "symbol": "DBT",
+    "balance": 440
+  },
+  {
+    "chain": "bsc",
+    "symbol": "Dex88.org",
+    "balance": 799999.9999999999
+  },
+  {
+    "chain": "bsc",
+    "symbol": "MKS",
+    "balance": 6500000
+  },
+  {
+    "chain": "bsc",
+    "symbol": "AkkSwap.io",
+    "balance": 32000
+  },
+  {
+    "chain": "bsc",
+    "symbol": "ORBIT",
+    "balance": 58397
+  },
+  {
+    "chain": "cronos",
+    "symbol": "DSHARE",
+    "balance": 0.003980925403529727
+  },
+  {
+    "chain": "cronos",
+    "symbol": "VVS",
+    "balance": 3.305547063e-9
+  },
+  {
+    "chain": "cronos",
+    "symbol": "cronosclassic.com",
+    "balance": 9000
+  },
+  {
+    "chain": "cronos",
+    "symbol": "cronosclassic.com",
+    "balance": 9000
+  },
+  {
+    "chain": "cronos",
+    "symbol": "Claim on: puushdabutton.live/?claim",
+    "balance": 1680000000
+  },
+  {
+    "chain": "avalanche",
+    "symbol": "AVAX",
+    "balance": 0.00020676500001
+  },
+  {
+    "chain": "avalanche",
+    "symbol": "WAVAX",
+    "balance": 0.06733289779419895
+  },
+  {
+    "chain": "avalanche",
+    "symbol": "AvaxClassic.com",
+    "balance": 74.04175000000001
+  },
+  {
+    "chain": "avalanche",
+    "symbol": "M32",
+    "balance": 1e-18
+  },
+  {
+    "chain": "avalanche",
+    "symbol": "MNEAV",
+    "balance": 300000
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/aavez ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ airstake.icu ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ adrpsui.lat ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ lzero.lol ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ web3floki.pro ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [https://bit.ly/suier]",
+    "balance": 2e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ airstake.biz ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/shibaz ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ ercfloki.lol ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ https://bit.ly/flokic ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/tpepe ] TO CLAIM 10000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ adrpsui.lol ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ lzero.lat ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ https://bit.ly/flokic ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ SHIBA.MOM ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ adrpsui.lat ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ airzero.lol ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/shibaz ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [https://bit.ly/suier]",
+    "balance": 2e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/shibaz ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ adrpsui.cfd ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/aavez ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/shibaz ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ lzero.lat ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/aavez ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/tpepe ] TO CLAIM 10000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ LIDOLAB.COM ] TO CLAIM REWARDS",
+    "balance": 99999.99999999999
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [web3sui.biz]",
+    "balance": 3000
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ adrpsui.lat ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "Blast Box https://blast-box.xyz",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ https://t.ly/aaves ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ lzero.lat ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ https://bit.ly/flokic ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ https://bit.ly/flokic ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [web3sui.one]",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/tpepe ] TO CLAIM 10000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ lzero.art ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/shibaz ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ lzero.art ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ airzero.cfd ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ flokis.icu ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ adrpsui.lol ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ adrpsui.lol ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ https://bit.ly/stakei ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ lzero.lat ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ https://bit.ly/zerob ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ web3floki.lol ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [web3sui.cfd]",
+    "balance": 3000
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/shibaz ] TO CLAIM 5000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [ airstake.lat ]",
+    "balance": 3e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ bit.ly/tpepe ] TO CLAIM 10000$ REWARDS",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ flokis.icu ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ airzero.sbs ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "$ CLAIM ON: [https://bit.ly/suier]",
+    "balance": 2e-18
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ floki.cfd ] TO CLAIM 5000$ Airdrop",
+    "balance": 1
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ layer.sbs ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-15
+  },
+  {
+    "chain": "gnosis",
+    "symbol": "VISIT [ airzero.lol ] TO CLAIM 5000$ REWARDS",
+    "balance": 1e-18
+  },
+  {
+    "chain": "arbitrum",
+    "symbol": "claim your $foxy at me-qr.com/XtaHKUG4",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "optimism",
+    "symbol": "claim $foxy at me-qr.com/dHY9RTeC",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "optimism",
+    "symbol": "OP",
+    "balance": 2000
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Claim on optimisam.org",
+    "balance": 2000
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Visit chain-link.ltd to Claim",
+    "balance": 400
+  },
+  {
+    "chain": "optimism",
+    "symbol": "claim foxy now at me-qr.com/d9uouqi5",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Claim on optimisam.ltd",
+    "balance": 2000
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Claim On chain-link.ltd",
+    "balance": 400
+  },
+  {
+    "chain": "optimism",
+    "symbol": "claim $foxy at me-qr.com/dHY9RTeC",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Visit optimisam.org to Claim",
+    "balance": 2000
+  },
+  {
+    "chain": "optimism",
+    "symbol": "3000OP voucher at opchain.lol",
+    "balance": 3000
+  },
+  {
+    "chain": "optimism",
+    "symbol": "claim $foxy at me-qr.com/dHY9RTeC",
+    "balance": 14499.999999999998
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Optimism",
+    "balance": 3000
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Visit optimisam.org to Claim",
+    "balance": 2000
+  },
+  {
+    "chain": "optimism",
+    "symbol": "Claim on https://t.ly/chain.link",
+    "balance": 400
+  },
+  {
+    "chain": "base",
+    "symbol": "TAOCAT",
+    "balance": 1331.69978
+  },
+  {
+    "chain": "base",
+    "symbol": "SKYA",
+    "balance": 1.72
+  },
+  {
+    "chain": "base",
+    "symbol": "$TRUMP - Claim: t.ly/TRUMP - #1",
+    "balance": 1
+  },
+  {
+    "chain": "base",
+    "symbol": "PG",
+    "balance": 49999.99999999999
+  },
+  {
+    "chain": "base",
+    "symbol": "SPC",
+    "balance": 4000
+  },
+  {
+    "chain": "base",
+    "symbol": "UNC - Claim: t.ly/UNC",
+    "balance": 1
+  },
+  {
+    "chain": "base",
+    "symbol": "UNC - Claim: t.ly/UNC",
+    "balance": 1
+  },
+  {
+    "chain": "base",
+    "symbol": "ROP",
+    "balance": 35
+  },
+  {
+    "chain": "base",
+    "symbol": "DSM",
+    "balance": 1100
+  },
+  {
+    "chain": "base",
+    "symbol": "FLC",
+    "balance": 20000
+  },
+  {
+    "chain": "base",
+    "symbol": "5ETH Reward at web3eth.vip",
+    "balance": 5
+  },
+  {
+    "chain": "base",
+    "symbol": "ELW",
+    "balance": 3000000
+  },
+  {
+    "chain": "base",
+    "symbol": "$TRUMP - Claim: t.ly/TRUMP - #47",
+    "balance": 1
+  },
+  {
+    "chain": "base",
+    "symbol": "VRA",
+    "balance": 150
+  },
+  {
+    "chain": "base",
+    "symbol": "XOLO",
+    "balance": 1400
+  }
+]
