@@ -1,10 +1,9 @@
-// src/lib/server/cb-jwt.js
-import crypto           from 'crypto';
-import jwt              from 'jsonwebtoken';
 import { readFileSync } from 'fs';
 import { resolve }      from 'path';
+import crypto           from 'crypto';
 import nacl             from 'tweetnacl';
-import { SignJWT, importJWK } from 'jose';
+import { importJWK, SignJWT } from 'jose';
+
 import {
   CDP_KEY_FILE,
   CDP_KEY_FILE2,
@@ -13,43 +12,48 @@ import {
   CB_API_HOST
 } from '$env/static/private';
 
-function loadKey() {
-  // pick ECDSA vs Ed25519 based on CDP_KEY_NAME2 presence
-  const isEd = Boolean(CDP_KEY_FILE2 && CDP_KEY_NAME2);
-  const file = isEd ? CDP_KEY_FILE2 : CDP_KEY_FILE;
-  const kid  = isEd ? CDP_KEY_NAME2 : CDP_KEY_NAME;
-  const raw  = JSON.parse(readFileSync(resolve(process.cwd(), file), 'utf8'));
-  return { isEd, kid, payload: raw };
-}
+/**
+ * @param {string} apiPath  the request path (e.g. '/api/v3/brokerage/accounts' or '/api/v2/accounts')
+ */
+export async function makeJwt(apiPath) {
+  console.log('[cb-jwt] ENV →', { CDP_KEY_FILE, CDP_KEY_FILE2, CDP_KEY_NAME, CDP_KEY_NAME2, CB_API_HOST, apiPath });
 
-export async function makeJwt(path = '/api/v3/brokerage/accounts') {
-  const { isEd, kid, payload } = loadKey();
+  // pick Ed25519 if available, otherwise ECDSA (not shown here)
+  const keyFile = CDP_KEY_FILE2 && CDP_KEY_NAME2 ? CDP_KEY_FILE2 : CDP_KEY_FILE;
+  const keyName = CDP_KEY_FILE2 && CDP_KEY_NAME2 ? CDP_KEY_NAME2 : CDP_KEY_NAME;
+  console.log('[cb-jwt] picking key →', keyFile, keyName);
+
+  // load the JSON key
+  const fullPath = resolve(process.cwd(), keyFile);
+  console.log('[cb-jwt] reading keyfile at', fullPath);
+  const { privateKey } = JSON.parse(readFileSync(fullPath, 'utf8'));
+
+  // Ed25519: privateKey is a base64 blob of seed+pubkey
+  const blob = Buffer.from(privateKey, 'base64');
+  console.log('[cb-jwt] full blob length:', blob.length);
+  const seed = blob.slice(0, 32);
+  console.log('[cb-jwt] trimming blob → seed length', seed.length);
+
+  // derive public key
+  const { publicKey } = nacl.sign.keyPair.fromSeed(new Uint8Array(seed));
+
+  // build JWK
+  const jwk = {
+    kty: 'OKP',
+    crv: 'Ed25519',
+    d:   Buffer.from(seed).toString('base64url'),
+    x:   Buffer.from(publicKey).toString('base64url'),
+    kid: keyName
+  };
+  console.log('[cb-jwt] built JWK:', { kid: jwk.kid, crv: jwk.crv });
+
+  // import JWK & create JWT
+  const key = await importJWK(jwk, 'EdDSA');
   const now   = Math.floor(Date.now()/1000);
   const nonce = crypto.randomBytes(16).toString('hex');
-  const uri   = `GET ${CB_API_HOST}${path}`;
+  const uri   = `GET ${CB_API_HOST}${apiPath}`;
 
-  if (!isEd) {
-    // ECDSA via jsonwebtoken
-    return jwt.sign(
-      { iss:'cdp', sub:kid, iat:now, nbf:now, exp:now+120, uri },
-      payload.privateKey,               // PEM SEC1
-      { algorithm:'ES256', header:{ kid, nonce } }
-    );
-  }
-
-  // Ed25519 via jose + tweetnacl
-  // payload.privateKey is base64(seed+pub), so we trim to 32-byte seed
-  const blob = Buffer.from(payload.privateKey, 'base64');
-  const seed = blob.slice(0,32);
-  const { publicKey } = nacl.sign.keyPair.fromSeed(seed);
-  const jwk = {
-    kty: 'OKP', crv:'Ed25519',
-    d:  Buffer.from(seed).toString('base64url'),
-    x:  Buffer.from(publicKey).toString('base64url'),
-    kid
-  };
-  const key = await importJWK(jwk, 'EdDSA');
-  return new SignJWT({ iss:'cdp', sub:kid, iat:now, nbf:now, exp:now+120, uri })
-    .setProtectedHeader({ alg:'EdDSA', kid, nonce })
+  return new SignJWT({ iss: 'cdp', sub: keyName, iat: now, nbf: now, exp: now + 120, uri })
+    .setProtectedHeader({ alg: 'EdDSA', kid: keyName, nonce })
     .sign(key);
 }

@@ -1,26 +1,22 @@
 <script>
     export let data;
-    const { details } = data;
   </script>
   
-  <h1>Your Exchange Balances</h1>
+  <h2>Your Exchange Balances</h2>
+  <ul>
+    {#each data.exchangeAccounts as acct}
+      {#if +acct.available_balance.value > 0}
+        <li>{acct.currency}: {acct.available_balance.value}</li>
+      {/if}
+    {/each}
+  </ul>
   
-  {#if details.length === 0}
-    <p>No non‐zero balances.</p>
-  {:else}
-    <ul>
-      {#each details as acct}
-        {#if acct.error}
-          <li>{acct.uuid}: error {acct.error}</li>
-        {:else}
-          <li><strong>{acct.currency}</strong>: {acct.available_balance.value}</li>
-        {/if}
-      {/each}
-    </ul>
-  {/if}
-  
-  <details>
-    <summary>Debug: raw data</summary>
-    <pre>{JSON.stringify(data, null, 2)}</pre>
-  </details>
+  <h2>Your Wallet Balances</h2>
+  <ul>
+    {#each data.walletAccounts as acct}
+      {#if +acct.balance.amount > 0}
+        <li>{acct.balance.currency}: {acct.balance.amount}</li>
+      {/if}
+    {/each}
+  </ul>
   
