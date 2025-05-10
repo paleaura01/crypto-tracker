@@ -1,47 +1,35 @@
 <script>
-  let address  = '';
-  let loading  = false;
-  let error    = '';
-  let portfolio = [];
+  import { onMount } from 'svelte';
 
-  async function loadAll() {
-    if (!address) {
-      error = 'Enter a wallet address';
-      return;
-    }
-    loading = true;
-    error   = '';
-    try {
-      const res = await fetch(`/api/combined-portfolio?address=${encodeURIComponent(address)}`);
-      if (!res.ok) throw new Error(await res.text());
-      portfolio = await res.json();
-    } catch (e) {
-      console.error(e);
-      error = 'Could not load portfolio';
-    } finally {
-      loading = false;
+  let balances = null;
+
+  function connect() {
+    window.open(
+      '/api/cb/oauth2/auth',
+      'cb-oauth',
+      'width=500,height=600'
+    );
+  }
+
+  function onMessage(e) {
+    if (e.origin !== window.location.origin) return;
+    if (e.data?.type === 'coinbase-oauth-success') {
+      balances = e.data.balances;
     }
   }
+
+  onMount(() => {
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  });
 </script>
 
-<div>
-  <input bind:value={address} placeholder="0x… address" />
-  <button on:click={loadAll} disabled={loading}>
-    {#if loading}Loading…{:else}Load All Balances{/if}
-  </button>
+<button on:click={connect}>
+  Connect with Coinbase
+</button>
 
-  {#if error}
-    <p class="error">{error}</p>
-  {:else if portfolio.length}
-    <ul>
-      {#each portfolio as { chain, symbol, balance, price, totalValue }}
-        <li>
-          <strong>{symbol}</strong> on {chain}: {balance}
-          @ ${price} → $ {totalValue.toFixed(2)}
-        </li>
-      {/each}
-    </ul>
-  {:else if !loading}
-    <p>No tokens found in Coingecko.</p>
-  {/if}
-</div>
+{#if balances}
+  <pre>{JSON.stringify(balances, null, 2)}</pre>
+{:else}
+  <p>Not connected</p>
+{/if}

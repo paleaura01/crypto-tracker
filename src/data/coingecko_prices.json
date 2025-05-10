@@ -1,11 +1,11 @@
 {
   "AVAX": {
     "id": "binance-peg-avalanche",
-    "usd": 23.88
+    "usd": 24.65
   },
   "BNB": {
     "id": "binance-coin-wormhole",
-    "usd": 664.53
+    "usd": 653.01
   },
   "DQUICK": {
     "id": "dragons-quick",
@@ -13,78 +13,78 @@
   },
   "DSHARE": {
     "id": "dibs-share",
-    "usd": 0.379034
+    "usd": 0.374525
   },
   "DSM": {
     "id": "desmos",
-    "usd": 0.00016972
+    "usd": 0.00017178
   },
   "ETH": {
     "id": "the-ticker-is-eth",
-    "usd": 0.00017406
+    "usd": 0.00017288
   },
   "FLC": {
     "id": "flooring-lab-credit",
-    "usd": 0.00012002
+    "usd": 0.00011001
   },
   "GLM": {
     "id": "golem",
-    "usd": 0.288624
+    "usd": 0.285703
   },
   "HOPE": {
     "id": "hopecore",
-    "usd": 0.00004429
+    "usd": 0.00004399
   },
   "JMPT": {
     "id": "jumptoken",
-    "usd": 1.001
+    "usd": 0.997731
   },
   "MDUS": {
     "id": "medieus",
-    "usd": 0.00035845
+    "usd": 0.00047535
   },
   "OP": {
     "id": "osmosis-allop",
-    "usd": 0.773729
+    "usd": 0.791615
   },
   "ORBIT": {
     "id": "orbit-protocol",
-    "usd": 0.00103818
+    "usd": 0.00104376
   },
   "POL": {
     "id": "proof-of-liquidity",
-    "usd": 0.0013332
+    "usd": 0.00138116
   },
   "ROP": {
     "id": "redemption-of-pets",
-    "usd": 0.059939
+    "usd": 0.063249
   },
   "SKYA": {
     "id": "sekuya-2",
-    "usd": 0.00409551
+    "usd": 0.00424133
   },
   "SPC": {
     "id": "storepay",
-    "usd": 0.00010047
+    "usd": 0.00010131
   },
   "TAOCAT": {
     "id": "taocat-by-virtuals",
-    "usd": 0.00442995
+    "usd": 0.00444328
   },
   "VRA": {
     "id": "verasity",
-    "usd": 0.00197167
+    "usd": 0.00204358
   },
   "VVS": {
     "id": "vvs-finance",
-    "usd": 0.00000248
+    "usd": 0.00000245
   },
   "WAVAX": {
     "id": "wrapped-avax",
-    "usd": 23.92
+    "usd": 24.52
   },
   "WETH": {
     "id": "zora-bridged-weth-zora-network",
-    "usd": 2365.4
+    "usd": 2435.96
   }
 }
