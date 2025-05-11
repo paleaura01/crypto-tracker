@@ -1,27 +1,13 @@
-<!-- routes/portfolio/+page.svelte -->
+<!-- src/routes/portfolio/+page.svelte -->
 <script>
+    import ExchangeBalances from './components/ExchangeBalances.svelte';
+    import WalletBalances   from './components/WalletBalances.svelte';
+    import LoanSummary      from './components/LoanSummary.svelte';
+  
     export let data;
   </script>
   
-  <h2>Your Exchange Balances</h2>
-  <ul>
-    {#each data.exchangeAccounts as acct}
-      {#if +acct.available_balance.value > 0}
-        <li>{acct.currency}: {acct.available_balance.value}</li>
-      {/if}
-    {/each}
-  </ul>
-  
-  <h2>Your Wallet Balances</h2>
-  {#if data.walletAccounts.length === 0}
-    <p><em>No on‑chain balances found.</em></p>
-  {:else}
-    <ul>
-      {#each data.walletAccounts as acct}
-        {#if +acct.balance.amount > 0}
-          <li>{acct.balance.currency}: {acct.balance.amount}</li>
-        {/if}
-      {/each}
-    </ul>
-  {/if}
+  <ExchangeBalances accounts={data.exchangeAccounts} />
+  <WalletBalances   accounts={data.walletAccounts}   />
+  <LoanSummary      loan={data.loan}                 />
   

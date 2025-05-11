@@ -1,22 +1,32 @@
-// routes/portfolio/+page.server.js
+import { fetchExchangeBalances } from './lib/exchange.js';
+import { fetchWalletBalances   } from './lib/wallet.js';
+import { fetchLoanData         } from './lib/loans.js';
 import { error } from '@sveltejs/kit';
-import { fetchExchangeBalances } from '$lib/server/cb-exchange.js';
-import { fetchWalletBalances   } from '$lib/server/cb-wallet.js';
 
-export async function load () {
-  // run in parallel
-  const [exch, wallet] = await Promise.allSettled([
+export async function load() {
+  // parallel‐invoke each
+  const [exch, wallet, loan] = await Promise.allSettled([
     fetchExchangeBalances(),
-    fetchWalletBalances()
+    fetchWalletBalances(),
+    fetchLoanData()
   ]);
 
-  if (exch.status === 'rejected')
-    throw error(500, `Exchange: ${exch.reason.message}`);
-  if (wallet.status === 'rejected')
-    console.warn('[portfolio] wallet fetch failed →', wallet.reason.message);
+  if (exch.status === 'rejected') {
+    throw error(500, `Exchange error: ${exch.reason.message}`);
+  }
+
+  // if wallet fails just show empty list
+  const walletAccounts = wallet.status === 'fulfilled'
+    ? wallet.value
+    : [];
+
+  const loanData = loan.status === 'fulfilled'
+    ? loan.value
+    : null;
 
   return {
-    exchangeAccounts : exch.value,
-    walletAccounts   : wallet.status === 'fulfilled' ? wallet.value : []
+    exchangeAccounts: exch.value,
+    walletAccounts,
+    loan: loanData
   };
 }

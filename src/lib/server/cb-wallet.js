@@ -8,7 +8,7 @@ const WALLET_PATH = '/api/v2/accounts';
 
 export async function fetchWalletBalances () {
   const jwt = await makeJwt(WALLET_PATH);
-  const res = await fetch(`https://${CB_API_HOST}${WALLET_PATH}`, {
+  const res = await fetch(`https://${CB_API_HOST}${CB_WALLET_PATH}`, {
     headers: { Authorization:`Bearer ${jwt}` }
   });
   if (!res.ok) throw new Error(`wallet ${res.status}`);
