@@ -1,3 +1,4 @@
+<!-- routes/portfolio/+page.svelte -->
 <script>
     export let data;
   </script>
@@ -12,11 +13,15 @@
   </ul>
   
   <h2>Your Wallet Balances</h2>
-  <ul>
-    {#each data.walletAccounts as acct}
-      {#if +acct.balance.amount > 0}
-        <li>{acct.balance.currency}: {acct.balance.amount}</li>
-      {/if}
-    {/each}
-  </ul>
+  {#if data.walletAccounts.length === 0}
+    <p><em>No on‑chain balances found.</em></p>
+  {:else}
+    <ul>
+      {#each data.walletAccounts as acct}
+        {#if +acct.balance.amount > 0}
+          <li>{acct.balance.currency}: {acct.balance.amount}</li>
+        {/if}
+      {/each}
+    </ul>
+  {/if}
   

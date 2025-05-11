@@ -1,48 +1,22 @@
-import { error }            from '@sveltejs/kit';
-import { CB_API_HOST, CB_API_PATH, CB_VERSION } from '$env/static/private';
-import fetch                from 'node-fetch';
-import { makeJwt }          from '$lib/server/cb-jwt';
+// routes/portfolio/+page.server.js
+import { error } from '@sveltejs/kit';
+import { fetchExchangeBalances } from '$lib/server/cb-exchange.js';
+import { fetchWalletBalances   } from '$lib/server/cb-wallet.js';
 
-export async function load() {
-  // — Exchange (brokerage v3)
-  console.log('[portfolio] fetching Exchange balances');
-  const exchJwt = await makeJwt(CB_API_PATH);
-  console.log('[portfolio] Exchange JWT:', exchJwt.slice(0,20) + '…');
+export async function load () {
+  // run in parallel
+  const [exch, wallet] = await Promise.allSettled([
+    fetchExchangeBalances(),
+    fetchWalletBalances()
+  ]);
 
-  const exchRes = await fetch(`https://${CB_API_HOST}${CB_API_PATH}`, {
-    headers: {
-      Authorization: `Bearer ${exchJwt}`,
-      'CB-VERSION':  CB_VERSION
-    }
-  });
-  if (!exchRes.ok) {
-    console.error('[portfolio] Exchange fetch failed', exchRes.status);
-    throw error(exchRes.status, 'Could not load exchange balances');
-  }
-  const { accounts: exchangeAccounts } = await exchRes.json();
-  console.log(`[portfolio] got ${exchangeAccounts.length} exchange accounts`);
-
-  // — Wallet (core v2)
-  const WALLET_PATH = '/api/v2/accounts';
-  console.log('[portfolio] fetching Wallet balances');
-  const walletJwt = await makeJwt(WALLET_PATH);
-  console.log('[portfolio] Wallet JWT:', walletJwt.slice(0,20) + '…');
-
-  const walletRes = await fetch(`https://${CB_API_HOST}${WALLET_PATH}`, {
-    headers: {
-      Authorization: `Bearer ${walletJwt}`
-      // no CB-VERSION for v2
-    }
-  });
-  if (!walletRes.ok) {
-    console.error('[portfolio] Wallet fetch failed', walletRes.status);
-    throw error(walletRes.status, 'Could not load wallet balances');
-  }
-  const { data: walletAccounts = [] } = await walletRes.json();
-  console.log(`[portfolio] got ${walletAccounts.length} wallet accounts`);
+  if (exch.status === 'rejected')
+    throw error(500, `Exchange: ${exch.reason.message}`);
+  if (wallet.status === 'rejected')
+    console.warn('[portfolio] wallet fetch failed →', wallet.reason.message);
 
   return {
-    exchangeAccounts,
-    walletAccounts
+    exchangeAccounts : exch.value,
+    walletAccounts   : wallet.status === 'fulfilled' ? wallet.value : []
   };
 }
