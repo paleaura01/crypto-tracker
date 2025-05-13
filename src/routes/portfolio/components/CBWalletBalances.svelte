@@ -1,15 +1,23 @@
 <script lang="ts">
-  import type { WalletAccount } from '../lib/cbwallet';
-  export let accounts: WalletAccount[] = [];
+  import type { WalletAccount } from '$lib/server/types';
+
+  export let wallets: WalletAccount[] = [];
 </script>
 
-<h2>Your Non-Custodial Wallet</h2>
-{#if accounts.length}
-  <ul>
-    {#each accounts as w}
-      <li>{w.balance.currency}: {w.balance.amount}</li>
-    {/each}
-  </ul>
-{:else}
-  <p><em>No on-chain balances found.</em></p>
-{/if}
+<div class="mb-6">
+  <h2 class="text-xl font-semibold mb-2">Coinbase Wallet</h2>
+  {#if wallets.length}
+    <ul class="list-disc pl-5">
+      {#each wallets
+        .filter(w => Number(w.balance.amount ?? 0) > 0)
+        as acct, idx (`wallet-${acct.id ?? idx}`)}
+        <li>
+          {acct.balance.currency}:
+          {acct.balance.amount}
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <p>No wallet balances.</p>
+  {/if}
+</div>

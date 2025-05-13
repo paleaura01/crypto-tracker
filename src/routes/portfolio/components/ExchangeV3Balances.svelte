@@ -1,22 +1,23 @@
 <script lang="ts">
+  import type { ExchangeV3Account } from '$lib/server/types';
 
-  import type { ExchangeV3Account } from '../lib/cbexchangev3';
   export let accounts: ExchangeV3Account[] = [];
 </script>
 
-<h2>Your Advanced Trade Balances</h2>
-{#if accounts.length}
-  <ul>
-    {#each accounts as acct (acct.id)}
-      {#if acct.available_balance?.value && +acct.available_balance.value > 0}
+<div class="mb-6">
+  <h2 class="text-xl font-semibold mb-2">Exchange V3 Balances</h2>
+  {#if accounts.length}
+    <ul class="list-disc pl-5">
+      {#each accounts
+        .filter(a => Number(a.available_balance?.value ?? 0) > 0)
+        as acct, idx (`v3-${acct.id ?? idx}`)}
         <li>
-          {acct.currency}: {acct.available_balance.value}
-          <!-- guard hold_balance too: -->
-          (hold: {acct.hold_balance?.value ?? '0'})
+          {acct.currency}:
+          {acct.available_balance?.value ?? acct.balance?.value ?? 0}
         </li>
-      {/if}
-    {/each}
-  </ul>
-{:else}
-  <p>No advanced-trade balances.</p>
-{/if}
+      {/each}
+    </ul>
+  {:else}
+    <p>No V3 balances found.</p>
+  {/if}
+</div>

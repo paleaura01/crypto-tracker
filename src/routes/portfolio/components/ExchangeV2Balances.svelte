@@ -1,20 +1,19 @@
 <script lang="ts">
-  import type { ExchangeV2Account } from '../lib/cbexchangev2';
+  import type { ExchangeV2Account } from '$lib/server/types';
   export let accounts: ExchangeV2Account[] = [];
-
-  // only USDC & BTC
-  $: filtered = accounts.filter(a =>
-    a.currency.code === 'USDC' || a.currency.code === 'BTC'
-  );
 </script>
 
-<h2>Your Exchange Balances</h2>
-{#if filtered.length}
-  <ul>
-    {#each filtered as acct}
-      <li>{acct.currency.code}: {acct.balance.amount}</li>
-    {/each}
-  </ul>
-{:else}
-  <p>No USDC or BTC balances.</p>
-{/if}
+<section>
+  <h2>Your Exchange Balances (v2)</h2>
+  {#if accounts.length}
+    <ul>
+      {#each accounts as acct}
+        {#if +acct.balance.amount > 0}
+          <li>{acct.currency.code}: {acct.balance.amount}</li>
+        {/if}
+      {/each}
+    </ul>
+  {:else}
+    <p>No v2 balances.</p>
+  {/if}
+</section>
