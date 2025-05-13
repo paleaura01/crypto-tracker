@@ -1,32 +1,29 @@
-import { fetchExchangeBalances } from './lib/exchange.js';
-import { fetchWalletBalances   } from './lib/wallet.js';
-import { fetchLoanData         } from './lib/loans.js';
-import { error } from '@sveltejs/kit';
+// src/routes/portfolio/+page.server.ts
+export const csr = false;     // ← disable client rendering/hydration
+export const ssr = true;      // ← keep server‐side rendering on
 
-export async function load() {
-  // parallel‐invoke each
-  const [exch, wallet, loan] = await Promise.allSettled([
-    fetchExchangeBalances(),
+import type { PageServerLoad } from './$types';
+import { fetchExchangeV2 }     from './lib/cbexchangev2';
+import { fetchExchangeV3 }     from './lib/cbexchangev3';
+import { fetchWalletBalances } from './lib/cbwallet';
+import { fetchLoanData }       from './lib/cbloans';
+import { error }               from '@sveltejs/kit';
+
+export const load: PageServerLoad = async () => {
+  const [v2, v3, wallet, loan] = await Promise.allSettled([
+    fetchExchangeV2(),
+    fetchExchangeV3(),
     fetchWalletBalances(),
     fetchLoanData()
   ]);
 
-  if (exch.status === 'rejected') {
-    throw error(500, `Exchange error: ${exch.reason.message}`);
-  }
-
-  // if wallet fails just show empty list
-  const walletAccounts = wallet.status === 'fulfilled'
-    ? wallet.value
-    : [];
-
-  const loanData = loan.status === 'fulfilled'
-    ? loan.value
-    : null;
+  if (v2.status === 'rejected') throw error(500, `v2 error: ${v2.reason}`);
+  if (v3.status === 'rejected') throw error(500, `v3 error: ${v3.reason}`);
 
   return {
-    exchangeAccounts: exch.value,
-    walletAccounts,
-    loan: loanData
+    exchangeAccountsV2: v2.value,
+    exchangeAccountsV3: v3.value,
+    walletAccounts:     wallet.status === 'fulfilled' ? wallet.value : [],
+    loan:               loan.status === 'fulfilled' ? loan.value : null
   };
-}
+};

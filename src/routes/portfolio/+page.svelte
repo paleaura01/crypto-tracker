@@ -1,15 +1,15 @@
-<!-- src/routes/portfolio/+page.svelte -->
-<script>
-    import AddressBalances   from './components/AddressBalances.svelte';
-    import ExchangeBalances from './components/ExchangeBalances.svelte';
-    import WalletBalances   from './components/WalletBalances.svelte';
-    import LoanSummary      from './components/LoanSummary.svelte';
+<script lang="ts">
+    import type { PageData } from './$types';
+    import ExchangeV2Balances from './components/ExchangeV2Balances.svelte';
+    import ExchangeV3Balances from './components/ExchangeV3Balances.svelte';
+    import CBWalletBalances   from './components/CBWalletBalances.svelte';
+    import CBLoanSummary      from './components/CBLoanSummary.svelte';
   
-    export let data;
+    export let data: PageData;
   </script>
   
-  <AddressBalances accounts={data.exchangeAccounts} />
-  <ExchangeBalances accounts={data.exchangeAccounts} />
-  <WalletBalances   accounts={data.walletAccounts}   />
-  <LoanSummary      loan={data.loan}                 />
+  <ExchangeV2Balances accounts={data.exchangeAccountsV2} />
+  <ExchangeV3Balances accounts={data.exchangeAccountsV3} />
+  <CBWalletBalances   accounts={data.walletAccounts} />
+  <CBLoanSummary      loan={data.loan}             />
   

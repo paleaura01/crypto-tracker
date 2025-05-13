@@ -2,7 +2,10 @@
     "extends": "./.svelte-kit/tsconfig.json",
     "compilerOptions": {
       "strict": true,
-      "useUnknownInCatchVariables": false
+      "useUnknownInCatchVariables": false,
+      "verbatimModuleSyntax": true,
+      "isolatedModules":      true,
+      "preserveValueImports": false
     },
     "include": ["src/**/*", "src/app.d.ts"],
     "exclude": ["node_modules", "public"]
