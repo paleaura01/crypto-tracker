@@ -1,49 +1,48 @@
 // src/hooks.server.ts
 import { createServerClient } from '@supabase/ssr';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import type { Handle } from '@sveltejs/kit';
-import { redirect } from '@sveltejs/kit';
-import { sequence } from '@sveltejs/kit/hooks';
+import {
+  PUBLIC_SUPABASE_URL,
+  PUBLIC_SUPABASE_ANON_KEY
+} from '$env/static/public';
+import {
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY
+} from '$env/static/private';
 
-//
-// 1) Initialize Supabase SSR client on locals
-//
-const supabaseInit: Handle = async ({ event, resolve }) => {
+import type { Handle } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
+import { redirect } from '@sveltejs/kit';
+
+const init: Handle = async ({ event, resolve }) => {
+  const { cookies } = event;
+
   event.locals.supabase = createServerClient(
     PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY,
-    {
-      // let the SSR helper set & read cookies for you
-      cookies: event.cookies,
-      cookieOptions: {
-        path: '/',
-        secure: process.env.NODE_ENV === 'production'
-      }
-    }
+    { cookies, cookieOptions: { path: '/', secure: false } }
   );
+
+  event.locals.supabaseAdmin = createServerClient(
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
+    { cookies, cookieOptions: { path: '/', secure: false } }
+  );
+
+  // read the session from the cookie
+  const { data } = await event.locals.supabase.auth.getSession();
+  event.locals.session = data.session;
 
   return resolve(event);
 };
 
-//
-// 2) Auth guard: allow only /auth/* for unauthenticated users
-//
-const authGuard: Handle = async ({ event, resolve }) => {
-  const {
-    data: { session }
-  } = await event.locals.supabase.auth.getSession();
-
-  event.locals.session = session;
-
+const guard: Handle = async ({ event, resolve }) => {
+  const { session } = event.locals;
   const path = event.url.pathname;
-  const isAuthRoute = path.startsWith('/auth/');
+  const isAuth = path.startsWith('/auth/');
 
-  // if no session and not on an /auth/* page → send to /auth/login
-  if (!session && !isAuthRoute) {
+  if (!session && !isAuth) {
     throw redirect(303, '/auth/login');
   }
-
-  // if session exists and user hits /auth/login or /auth/signup → send to dashboard
   if (session && (path === '/auth/login' || path === '/auth/signup')) {
     throw redirect(303, '/dashboard');
   }
@@ -51,4 +50,4 @@ const authGuard: Handle = async ({ event, resolve }) => {
   return resolve(event);
 };
 
-export const handle = sequence(supabaseInit, authGuard);
+export const handle = sequence(init, guard);

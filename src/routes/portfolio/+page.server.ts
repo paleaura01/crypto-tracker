@@ -1,3 +1,4 @@
+// src/routes/portfolio/+page.server.ts
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -6,7 +7,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     .select('*');
 
   if (error) {
-    console.error('Portfolio load error', error);
+    console.error('Failed to load portfolio', error);
   }
 
   return { portfolio: portfolio ?? [] };
