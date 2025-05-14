@@ -1,19 +1,17 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_SERVICE_ROLE_KEY, PUBLIC_SUPABASE_URL } from '$env/static/private';
+import { createServerClient } from '@supabase/ssr';
+import type { RequestEvent } from '@sveltejs/kit';
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 
-export function createAdminClient(cookies: RequestEvent['cookies']): SupabaseClient {
-  // adapt cookie store API to CookieMethods:
-  const cookieStore = {
-    getAll() { return cookies.getAll(); },
-    setAll(toSet: Array<{ name: string; value: string; options: CookieOptions }>) {
-      toSet.forEach(({ name, value, options }) => cookies.set(name, value, options));
-    }
-  };
-
+export function getSupabaseAdminClient(event: RequestEvent) {
   return createServerClient(
-    PUBLIC_SUPABASE_URL,
+    SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY,
-    { cookies: cookieStore }
+    {
+      cookies: event.cookies,
+      cookieOptions: {
+        secure: process.env.NODE_ENV === 'production',
+        path: '/'
+      }
+    }
   );
 }

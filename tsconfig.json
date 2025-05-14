@@ -1,13 +1,11 @@
+// tsconfig.json
 {
-    "extends": "./.svelte-kit/tsconfig.json",
-    "compilerOptions": {
-      "strict": true,
-      "useUnknownInCatchVariables": false,
-      "verbatimModuleSyntax": true,
-      "isolatedModules":      true,
-      "preserveValueImports": false
-    },
-    "include": ["src/**/*", "src/app.d.ts"],
-    "exclude": ["node_modules", "public"]
-  }
-  
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "types": ["@sveltejs/kit"]
+  },
+  "include": [
+    "src/**/*",
+    ".svelte-kit/ambient.d.ts"
+  ]
+}
