@@ -1,15 +1,18 @@
-import type { SupabaseClient, Session } from '@supabase/supabase-js';
-import type { Database } from '$lib/types/database';
+// src/app.d.ts
+import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
+import type { Database } from './lib/types/database';
 
 declare global {
-	// Locals that are added in hooks.server.ts
-	namespace App {
-		interface Locals {
-			session: Session | null;
-			supabase: SupabaseClient<Database>;
-			supabaseAdmin: SupabaseClient<Database>;
-		}
-	}
+  namespace App {
+    interface Locals {
+      supabase: SupabaseClient<Database>;
+      safeGetSession: () => Promise<{ session: Session | null; user: User | null }>;
+      session: Session | null;
+      user: User | null;
+    }
+    interface PageData {
+      session: Session | null;
+    }
+  }
 }
-
-export {}; // keep file a module
+export {};

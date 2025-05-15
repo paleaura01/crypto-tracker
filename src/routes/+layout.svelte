@@ -1,23 +1,45 @@
 <script lang="ts">
-  import '../app.css';
-  import type { Session } from '@supabase/supabase-js';
-  export let data: { session: Session | null; isAdmin: boolean };
+  import '../app.css';                             // ① import your global Tailwind CSS :contentReference[oaicite:0]{index=0}
+
+  import { onMount } from 'svelte';
+  import { invalidate } from '$app/navigation';
+
+  // `data.supabase` and `data.session` come from your +layout.ts load function
+  export let data: { supabase: any; session: any };
+
+  onMount(() => {
+    // ② Correctly destructure the Subscription from the nested `data` object
+    const { data: { subscription } } =
+      data.supabase.auth.onAuthStateChange((_event, newSession) => {
+        // When the session changes, re-invalidate the load function
+        if (newSession?.expires_at !== data.session?.expires_at) {
+          invalidate('supabase:auth');
+        }
+      });
+
+    // ③ Clean up the listener on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  });
+
+  // Example method to log out
+  function signOut() {
+    data.supabase.auth.signOut();
+  }
 </script>
 
-<nav class="bg-gray-50 p-4 flex gap-6 font-medium">
+<nav class="bg-gray-900 text-white p-4 flex justify-between items-center">
+  <h1 class="text-2xl font-bold text-blue-500">CryptoTracker</h1>
   {#if data.session}
-    <a href="/dashboard"    class="hover:underline">Dashboard</a>
-    <a href="/portfolio"    class="hover:underline">Portfolio</a>
-    <a href="/transactions" class="hover:underline">Transactions</a>
-    {#if data.isAdmin}
-      <a href="/admin" class="hover:underline text-red-600">Admin</a>
-    {/if}
-    <form method="POST" action="/auth/logout" class="ml-auto">
-      <button type="submit" class="hover:underline">Logout</button>
-    </form>
+    <div class="space-x-4">
+      <span>{data.session.user.email}</span>
+      <button on:click={signOut} class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-500">
+        Log Out
+      </button>
+    </div>
   {:else}
-    <a href="/auth/login"  class="hover:underline">Login</a>
-    <a href="/auth/signup" class="hover:underline">Sign Up</a>
+    <a href="/auth/login" class="px-3 py-1 bg-blue-600 rounded hover:bg-blue-500">Log In</a>
   {/if}
 </nav>
 

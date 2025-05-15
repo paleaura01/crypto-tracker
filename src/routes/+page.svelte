@@ -1,3 +1,5 @@
+<!--src/routes/+page.svelte-->
+
 <svelte:head>
 	<title>Crypto Tracker</title>
 </svelte:head>

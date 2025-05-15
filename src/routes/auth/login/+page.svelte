@@ -1,17 +1,27 @@
+<!-- src/routes/auth/login/+page.svelte-->
+
 <script lang="ts">
-	import { supabase } from '$lib/services/supabaseClient';
-	let email = '', password = '', error = '';
-	async function signIn() {
-		const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-		if (err) error = err.message;
-		else window.location.href = '/dashboard';
-	}
+  import { enhance } from '$app/forms';
+  import { page } from '$app/state';
+  export let data: { error?: string };
+  let email = '', password = '';
 </script>
 
-<h2 class="text-xl font-semibold mb-2">Log in</h2>
-<form on:submit|preventDefault={signIn} class="space-y-2">
-	<input class="border p-2 w-full" bind:value={email} type="email" placeholder="Email" />
-	<input class="border p-2 w-full" bind:value={password} type="password" placeholder="Password" />
-	<button class="btn btn-primary w-full">Sign in</button>
-	{#if error}<p class="text-red-600 text-sm">{error}</p>{/if}
+<form method="POST" use:enhance class="max-w-sm mx-auto space-y-4">
+  {#if data.error}
+    <p class="text-red-400 text-center">{data.error}</p>
+  {/if}
+
+  <input name="email" type="email" placeholder="Email"
+         bind:value={email}
+         class="w-full p-2 rounded bg-gray-800" />
+
+  <input name="password" type="password" placeholder="Password"
+         bind:value={password}
+         class="w-full p-2 rounded bg-gray-800" />
+
+  <button type="submit"
+          class="w-full py-2 bg-blue-500 rounded hover:bg-blue-400">
+    Log in
+  </button>
 </form>
