@@ -1,8 +1,15 @@
-// src/routes/auth/logout/+server.ts
 import { redirect } from '@sveltejs/kit';
-export const POST = async ({ locals }) => {
-  // clears both the refresh-token cookie and the session in Supabase
+import type { RequestHandler } from './$types';
+
+export const POST: RequestHandler = async ({ locals, cookies }) => {
+  // Use the SSR client to clear cookies & Supabase session
   await locals.supabase.auth.signOut();
-  // send you home and now locals.session will be null
-  throw redirect(303, '/auth/login');
+
+  // remove Supabase cookies
+  cookies.delete('sb-access-token', { path: '/' });
+  cookies.delete('sb-refresh-token', { path: '/' });
+  cookies.delete('sb-persist-session', { path: '/' });
+
+  // redirect back to home or login
+  throw redirect(303, '/');
 };
