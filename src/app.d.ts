@@ -1,10 +1,15 @@
 import type { SupabaseClient, Session } from '@supabase/supabase-js';
-import type { Database } from './lib/server/types'; // your generated types
+import type { Database } from '$lib/types/database';
 
-declare namespace App {
-  interface Locals {
-    supabase: SupabaseClient<Database, 'public', any>;
-    supabaseAdmin: SupabaseClient<any, 'service_role'>;
-    session: Session | null;
-  }
+declare global {
+	// Locals that are added in hooks.server.ts
+	namespace App {
+		interface Locals {
+			session: Session | null;
+			supabase: SupabaseClient<Database>;
+			supabaseAdmin: SupabaseClient<Database>;
+		}
+	}
 }
+
+export {}; // keep file a module

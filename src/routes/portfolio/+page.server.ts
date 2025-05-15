@@ -1,10 +1,23 @@
-// src/routes/portfolio/+page.server.ts
 import type { PageServerLoad } from './$types';
+import {
+	fetchExchangeV2,
+	fetchExchangeV3,
+	fetchWalletBalances,
+	fetchLoanData
+} from '$lib/services/coinbaseClient';
 
-export const load: PageServerLoad = async ({ locals }) => {
-  // locals.supabase is already authenticated
-  const { data } = await locals.supabase
-    .from('portfolio')
-    .select('*');
-  return { portfolio: data };
+export const load: PageServerLoad = async () => {
+	const [exchangeV2, exchangeV3, wallet, loans] = await Promise.all([
+		fetchExchangeV2(),
+		fetchExchangeV3(),
+		fetchWalletBalances(),
+		fetchLoanData()
+	]);
+
+	return {
+		exchangeV2,
+		exchangeV3,
+		wallet,
+		loans
+	};
 };

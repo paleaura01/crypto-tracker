@@ -1,6 +1,7 @@
-// src/routes/+layout.server.ts
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ locals }) => ({
-  session: locals.session
-});
+export const load: LayoutServerLoad = ({ locals }) => {
+  const session = locals.session;
+  const isAdmin = session?.user?.app_metadata?.role === 'admin';
+  return { session, isAdmin };
+};

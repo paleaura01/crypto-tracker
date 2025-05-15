@@ -1,33 +1,15 @@
-// src/routes/api/balances/[address]/+server.ts
-import { json, error } from '@sveltejs/kit';
-import { PUBLIC_SOLANA_RPC_URL } from '$env/static/public';
+import { json } from '@sveltejs/kit';
+import {
+	fetchExchangeV2,
+	fetchExchangeV3,
+	fetchWalletBalances
+} from '$lib/services/coinbaseClient';
 
-export async function GET({ params }) {
-  const address = params.address;
-
-  // Build JSON-RPC request for getBalance
-  const rpcPayload = {
-    jsonrpc: '2.0',
-    id: 1,
-    method: 'getBalance',
-    params: [address]
-  };
-
-  // Send to Helius/RPC endpoint
-  const res = await fetch(PUBLIC_SOLANA_RPC_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(rpcPayload)
-  });
-  if (!res.ok) {
-    throw error(res.status, `RPC error: ${res.statusText}`);
-  }
-
-  const { result } = await res.json();
-  if (!result || typeof result.value !== 'number') {
-    throw error(502, 'Invalid RPC response');
-  }
-
-  // Return lamports directly; conversion to SOL happens client-side if desired
-  return json({ balance: result.value });
-}
+export const GET = async () => {
+	const [v2, v3, wallet] = await Promise.all([
+		fetchExchangeV2(),
+		fetchExchangeV3(),
+		fetchWalletBalances()
+	]);
+	return json({ v2, v3, wallet });
+};

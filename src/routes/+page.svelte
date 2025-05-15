@@ -1,11 +1,8 @@
-<!-- src/routes/+page.svelte -->
-
-
 <svelte:head>
-  <title>Welcome | Crypto Tracker</title>
+	<title>Crypto Tracker</title>
 </svelte:head>
 
-<h1>Welcome to Crypto Tracker!</h1>
-<p>
-	Use the navigation above to visit Dashboard, Portfolio, Transactions, or log in/sign up.
-</p>
+<section class="p-10 text-center">
+	<h1 class="text-3xl font-bold mb-4">Welcome to Crypto Tracker</h1>
+	<p>Use the navigation above to visit your dashboard or portfolio.</p>
+</section>
