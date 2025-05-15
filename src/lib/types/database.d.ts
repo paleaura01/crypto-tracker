@@ -1,41 +1,31 @@
-/* Shared domain models (Supabase row types + Coinbase DTOs) */
+/* Raw shapes as returned by Coinbase APIs */
 
+// V2 “advanced trade” accounts return a nested currency object
 export interface ExchangeV2Account {
-	id: string;
-	currency: string;
-	balance: { value: string; currency: string };
-	available_balance?: { value: string; currency: string };
-	[k: string]: any;
+  id: string;
+  currency: { code: string; [k: string]: any };
+  balance:   { amount: string; currency: string };
+  available_balance?: { amount: string; currency: string };
+  [k: string]: any;
 }
 
+// V3 “brokerage” accounts return a flat currency code and balance.value
 export interface ExchangeV3Account {
-	id: string;
-	currency: string;
-	balance: { value: string; currency: string };
-	available_balance?: { value: string; currency: string };
-	[k: string]: any;
+  id: string;
+  currency: string;
+  balance:   { value: string; currency: string };
+  available_balance?: { value: string; currency: string };
+  [k: string]: any;
 }
 
+// On-chain wallet accounts mirror V2’s balance.amount
 export interface WalletAccount {
-	id: string;
-	balance: { amount: string; currency: string };
-	[k: string]: any;
+  id: string;
+  balance: { amount: string; currency: string };
+  [k: string]: any;
 }
 
-export interface LoanData {
-	id: string;
-	collateral: string;
-	loanAmount: string;
-	[k: string]: any;
-}
+export interface LoanData { /* ... */ }
 
-/* Example Supabase table types (generated via supabase gen types) */
-export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
-
-export interface Database {
-	public: {
-		Tables: {
-			/* add your table definitions or import generated types here */
-		};
-	};
-}
+/* Your Supabase types, if any… */
+export interface Database { /* … */ }

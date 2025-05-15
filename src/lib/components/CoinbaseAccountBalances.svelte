@@ -1,0 +1,22 @@
+<script lang="ts">
+  import type { ExchangeV3Account } from '$lib/types/database';
+  export let accounts: ExchangeV3Account[] = [];
+</script>
+
+<div class="mb-6">
+  <h2 class="text-xl font-semibold mb-2">Exchange V3 Balances</h2>
+  {#if accounts.length}
+    <ul class="list-disc pl-5">
+      {#each accounts
+        .filter(a => Number(a.available_balance?.value ?? a.balance.value ?? 0) > 0)
+        as acct, idx (`v3-${acct.id ?? idx}`)}
+        <li>
+          {acct.currency}:
+          {acct.available_balance?.value ?? acct.balance.value}
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <p>No V3 balances found.</p>
+  {/if}
+</div>
