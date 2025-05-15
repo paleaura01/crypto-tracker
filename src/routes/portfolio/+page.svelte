@@ -1,3 +1,6 @@
+<!-- src/routes/portfolio/+page.svelte -->
+
+
 <script lang="ts">
     import ExchangeV2Balances from './components/ExchangeV2Balances.svelte';
     import ExchangeV3Balances from './components/ExchangeV3Balances.svelte';

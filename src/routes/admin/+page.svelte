@@ -129,7 +129,7 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 1rem;
-        background: white;
+        background: black;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
@@ -140,12 +140,12 @@
     }
 
     th {
-        background: #f8f8f8;
+        background: black;
         font-weight: 600;
     }
 
     tr:hover {
-        background: #f5f5f5;
+        background: #7070706c;
     }
 
     .actions {

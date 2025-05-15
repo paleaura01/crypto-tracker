@@ -1,13 +1,10 @@
+// src/routes/dashboard/+page.server.ts
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  const { data: stats, error } = await locals.supabaseAdmin
+  const { data } = await locals.supabaseAdmin
     .from('dashboard_stats')
     .select('*');
 
-  if (error) {
-    console.error('Failed to load dashboard', error);
-  }
-
-  return { stats: stats ?? [] };
+  return { stats: data ?? [] };
 };

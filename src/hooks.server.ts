@@ -1,53 +1,55 @@
 // src/hooks.server.ts
-import { createServerClient } from '@supabase/ssr';
-import {
-  PUBLIC_SUPABASE_URL,
-  PUBLIC_SUPABASE_ANON_KEY
-} from '$env/static/public';
-import {
-  SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY
-} from '$env/static/private';
-
-import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
+import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
+import { createServerClient } from '@supabase/ssr';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 
-const init: Handle = async ({ event, resolve }) => {
-  const { cookies } = event;
+const ignoreWellKnown: Handle = async ({ event, resolve }) => {
+  if (event.url.pathname.startsWith('/.well-known/')) {
+    return new Response(null, { status: 204 });
+  }
+  return resolve(event);
+};
 
+const initClients: Handle = async ({ event, resolve }) => {
+  // both clients automatically read/write event.cookies
   event.locals.supabase = createServerClient(
     PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY,
-    { cookies, cookieOptions: { path: '/', secure: false } }
+    {
+      cookies: event.cookies,
+      cookieOptions: { path: '/' }
+    }
   );
 
   event.locals.supabaseAdmin = createServerClient(
     SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY,
-    { cookies, cookieOptions: { path: '/', secure: false } }
+    {
+      cookies: event.cookies,
+      cookieOptions: { path: '/' }
+    }
   );
 
-  // read the session from the cookie
-  const { data } = await event.locals.supabase.auth.getSession();
-  event.locals.session = data.session;
+  const {
+    data: { session }
+  } = await event.locals.supabase.auth.getSession();
+  event.locals.session = session;
 
   return resolve(event);
 };
 
 const guard: Handle = async ({ event, resolve }) => {
-  const { session } = event.locals;
   const path = event.url.pathname;
-  const isAuth = path.startsWith('/auth/');
-
-  if (!session && !isAuth) {
+  if (!path.startsWith('/auth/') && !event.locals.session) {
     throw redirect(303, '/auth/login');
   }
-  if (session && (path === '/auth/login' || path === '/auth/signup')) {
+  if (event.locals.session && (path === '/auth/login' || path === '/auth/signup')) {
     throw redirect(303, '/dashboard');
   }
-
   return resolve(event);
 };
 
-export const handle = sequence(init, guard);
+export const handle = sequence(ignoreWellKnown, initClients, guard);

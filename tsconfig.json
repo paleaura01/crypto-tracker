@@ -4,8 +4,5 @@
   "compilerOptions": {
     "types": ["@sveltejs/kit"]
   },
-  "include": [
-    "src/**/*",
-    ".svelte-kit/ambient.d.ts"
-  ]
+  "include": ["src/**/*", ".svelte-kit/ambient.d.ts"]
 }
