@@ -5,6 +5,16 @@
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Crypto Tracker – Track Your Crypto Portfolio</title>
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem('theme');
+          const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const isDark = stored === 'dark' || (!stored && prefers);
+          document.documentElement.classList.toggle('dark', isDark);
+        } catch (e) {}
+      })();
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">
