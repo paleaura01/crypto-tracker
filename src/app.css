@@ -62,6 +62,7 @@
   html.dark tr:hover {
     @apply bg-gray-700;
   }
+  
 
   /* BUTTONS */
   .btn {

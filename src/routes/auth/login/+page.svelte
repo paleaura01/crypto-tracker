@@ -1,41 +1,46 @@
+<!-- no need to re-import app.css here, it comes from your root +layout.svelte -->
 <svelte:head>
-  <title>Welcome | Crypto Tracker</title>
+  <title>Log In | Crypto Tracker</title>
 </svelte:head>
 
-<script>
+<script lang="ts">
   import { supabase } from '$lib/supabaseClient';
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+
+  let mounted = false;
   let email = '';
   let password = '';
   let loading = false;
   let message = '';
 
-  async function handleLogin() {
-    try {
-      loading = true;
-      message = 'Logging in...';
+  onMount(() => {
+    // ensure we only render after hydration (avoids flicker)
+    mounted = true;
+  });
 
+  async function handleLogin() {
+    loading = true;
+    message = '';
+
+    try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      if (!data.session) throw new Error('No session returned');
 
-      if (!data.session) {
-        throw new Error('Login succeeded, but no session was returned.');
-      }
-
-      // Set session cookie on the server with credentials so that the cookie is stored
       const res = await fetch('/api/set-session-cookie', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session: data.session })
       });
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to set session cookie');
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to set session cookie');
       }
 
-      message = 'Logged in successfully!';
-      window.location.href = '/dashboard';
-    } catch (err) {
+      goto('/dashboard');
+    } catch (err: any) {
       console.error('Login error:', err);
       message = err.message;
     } finally {
@@ -44,28 +49,46 @@
   }
 </script>
 
-<h1>Login</h1>
-<form name="login" on:submit|preventDefault={handleLogin}>
-  <input
-    type="email"
-    bind:value={email}
-    placeholder="Email"
-    name="email"
-    autocomplete="email"
-    required
-    style="display: block; margin-bottom: 1rem;"
-  />
-  <input
-    type="password"
-    bind:value={password}
-    placeholder="Password"
-    name="password"
-    autocomplete="current-password"
-    required
-    style="display: block; margin-bottom: 1rem;"
-  />
-  <button type="submit" disabled={loading}>
-    {#if loading}Loading...{:else}Login{/if}
-  </button>
-</form>
-<p>{message}</p>
+{#if mounted}
+<main>
+  <form
+    on:submit|preventDefault={handleLogin}
+    class="max-w-md mx-auto mt-12 p-8 rounded-lg shadow-lg"
+  >
+    <h2 class="text-2xl font-semibold mb-6">
+      Welcome back
+    </h2>
+
+    <div class="space-y-4 mb-6">
+      <input
+        type="email"
+        bind:value={email}
+        placeholder="Email"
+        autocomplete="email"
+        class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2"
+        required
+      />
+      <input
+        type="password"
+        bind:value={password}
+        placeholder="Password"
+        autocomplete="current-password"
+        class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2"
+        required
+      />
+    </div>
+
+    <button
+      type="submit"
+      class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded disabled:opacity-50 transition"
+      disabled={loading}
+    >
+      {#if loading}Logging in…{:else}Log In{/if}
+    </button>
+
+    {#if message}
+      <p class="mt-4 text-center text-red-500">{message}</p>
+    {/if}
+  </form>
+</main>
+{/if}

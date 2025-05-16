@@ -9,9 +9,13 @@ declare global {
       session: Session | null;
       /** your service-role Supabase client */
       supabaseAdmin: SupabaseClient;
+      /** Supabase client using anon key for user‐side actions */
+     supabase: SupabaseClient;
     }
   }
 }
+
+
 
 // allow `import X from '*.svelte'`
 declare module '*.svelte' {

@@ -1,9 +1,15 @@
+<!-- src/routes/auth/signup/+page.svelte -->
+<svelte:head>
+  <title>Sign Up | CryptoTracker</title>
+</svelte:head>
+
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
   import { walletStore, connectSolflare, requestAirdrop } from '$lib/stores/wallet';
   import { env } from '$env/dynamic/public';
+  import { get } from 'svelte/store';
   import {
     Connection,
     PublicKey,
@@ -11,7 +17,6 @@
     Transaction,
     SystemProgram
   } from '@solana/web3.js';
-  import { get } from 'svelte/store';
 
   let mounted = false;
   let email = '';
@@ -47,7 +52,8 @@
   });
 
   async function handleConnectWallet() {
-    loading = true; message = '';
+    loading = true;
+    message = '';
     try {
       await connectSolflare();
       message = 'Wallet connected!';
@@ -61,20 +67,17 @@
   async function handleSignUp() {
     loading = true;
     message = '';
-
     if (solanaAmount <= 0) {
       message = 'Waiting for SOL price…';
       loading = false;
       return;
     }
-
     const ws = get(walletStore);
     if (!ws.connected || !ws.publicKey) {
       message = 'Please connect your wallet first.';
       loading = false;
       return;
     }
-
     try {
       // build & send SOL transfer
       const conn = new Connection(env.PUBLIC_SOLANA_RPC_URL.replace(/\/\?/, '?'), 'confirmed');
@@ -88,13 +91,9 @@
       tx.recentBlockhash = blockhash;
       tx.feePayer = fromPub;
 
-      // narrow window.solflare
-      const solflare = (window as any).solflare as {
-        signTransaction(tx: Transaction): Promise<Transaction>;
-      } | undefined;
+      const solflare = (window as any).solflare;
       if (!solflare) throw new Error('Solflare not available');
       const signed = await solflare.signTransaction(tx);
-
       const sig = await conn.sendRawTransaction(signed.serialize());
       const conf = await conn.confirmTransaction(sig);
       if (conf.value.err) throw new Error('Payment failed to confirm.');
@@ -148,108 +147,102 @@
   }
 </script>
 
+<main>
+  <div class="max-w-md mx-auto mt-12 p-6 rounded-lg shadow-lg">
+    <h1 class="text-2xl font-semibold mb-4">
+      Sign Up
+    </h1>
 
-<form
-  class="max-w-md mx-auto mt-12 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg"
-  on:submit|preventDefault={handleSignUp}
->
-  <h1 class="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">
-    Sign Up
-  </h1>
-
-  <div class="space-y-4">
-    <input
-      type="email"
-      bind:value={email}
-      placeholder="Email"
-      autocomplete="email"
-      class="w-full px-4 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-      required
-    />
-    <input
-      type="password"
-      bind:value={password}
-      placeholder="Password"
-      autocomplete="new-password"
-      class="w-full px-4 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-      required
-    />
-  </div>
-
-  <fieldset class="mt-6 mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded">
-    <legend class="font-medium text-gray-800 dark:text-gray-200 mb-2">
-      Choose your plan
-    </legend>
-    <label class="flex items-center mb-2 space-x-3 cursor-pointer">
+    <div class="space-y-4 mb-6">
       <input
-        type="radio"
-        name="plan"
-        value="monthly"
-        bind:group={selectedPlan}
-        class="form-radio text-green-500"
+        type="email"
+        bind:value={email}
+        placeholder="Email"
+        autocomplete="email"
+        class="w-full px-4 py-2 border rounded border-gray-500"
+        required
       />
-      <span class="text-gray-900 dark:text-gray-100">
-        Monthly – $5
-        {#if mounted && solanaAmount > 0}
-          (≈ {solanaAmount.toFixed(4)} SOL)
-        {/if}
-      </span>
-    </label>
-    <label class="flex items-center space-x-3 cursor-pointer">
       <input
-        type="radio"
-        name="plan"
-        value="lifetime"
-        bind:group={selectedPlan}
-        class="form-radio text-green-500"
+        type="password"
+        bind:value={password}
+        placeholder="Password"
+        autocomplete="new-password"
+        class="w-full px-4 py-2 border rounded border-gray-500"
+        required
       />
-      <span class="text-gray-900 dark:text-gray-100">
-        Lifetime – $50
-        {#if mounted && solanaAmount > 0}
-          (≈ {solanaAmount.toFixed(4)} SOL)
-        {/if}
-      </span>
-    </label>
-  </fieldset>
+    </div>
 
-  {#if mounted}
-    <button
-      type="button"
-      on:click={handleConnectWallet}
-      class="w-full mb-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded disabled:opacity-50"
-      disabled={loading}
-    >
-      {#if $walletStore.connected && $walletStore.publicKey}
-        Connected: {$walletStore.publicKey.slice(0,4)}…{$walletStore.publicKey.slice(-4)}
-      {:else}
-        Connect Wallet
-      {/if}
-    </button>
+    <fieldset class="p-4 rounded mb-6 0">
+      <legend class="font-medium  mb-2">
+        Choose your plan
+      </legend>
+      <label class="flex items-center mb-2 space-x-3 cursor-pointer">
+        <input
+          type="radio"
+          name="plan"
+          value="monthly"
+          bind:group={selectedPlan}
+          class="form-radio text-green-500"
+        />
+        <span class="">
+          Monthly – $5
+          {#if mounted && solanaAmount > 0} (≈ {solanaAmount.toFixed(4)} SOL){/if}
+        </span>
+      </label>
+      <label class="flex items-center space-x-3 cursor-pointer">
+        <input
+          type="radio"
+          name="plan"
+          value="lifetime"
+          bind:group={selectedPlan}
+          class="form-radio text-green-500"
+        />
+        <span class="">
+          Lifetime – $50
+          {#if mounted && solanaAmount > 0} (≈ {solanaAmount.toFixed(4)} SOL){/if}
+        </span>
+      </label>
+    </fieldset>
 
-    {#if $walletStore.connected && $walletStore.publicKey}
-      <div class="text-sm text-gray-700 dark:text-gray-300 mb-4">
-        Balance: {$walletStore.balance} SOL
-      </div>
+    {#if mounted}
       <button
         type="button"
-        on:click={requestAirdrop}
-        class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+        on:click={handleConnectWallet}
+        class="w-full mb-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded disabled:opacity-50"
         disabled={loading}
       >
-        Request Airdrop
+        {#if $walletStore.connected && $walletStore.publicKey}
+          Connected: {$walletStore.publicKey.slice(0,4)}…{$walletStore.publicKey.slice(-4)}
+        {:else}
+          Connect Wallet
+        {/if}
       </button>
+
+      {#if $walletStore.connected && $walletStore.publicKey}
+        <div class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+          Balance: {$walletStore.balance} SOL
+        </div>
+        <button
+          type="button"
+          on:click={requestAirdrop}
+          class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+          disabled={loading}
+        >
+          Request Airdrop
+        </button>
+      {/if}
     {/if}
-  {/if}
 
-  <button
-    type="submit"
-    class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-semibold rounded disabled:opacity-50"
-    disabled={loading || !$walletStore.connected}
-  >
-    {loading ? 'Processing…' : 'Subscribe & Sign Up'}
-  </button>
+    <button
+      on:click={handleSignUp}
+      class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-semibold rounded disabled:opacity-50 transition"
+      disabled={loading || !get(walletStore).connected}
+    >
+      {loading ? 'Processing…' : 'Subscribe & Sign Up'}
+    </button>
 
-  {#if message}
-    <p class="mt-4 text-center text-red-500">{message}</p>
-  {/if}
-</form>
+    {#if message}
+      <p class="mt-4 text-center text-red-500">{message}</p>
+    {/if}
+  </div>
+</main>

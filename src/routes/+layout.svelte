@@ -60,7 +60,7 @@
 </script>
 
 <div class="min-h-screen flex flex-col">
-  <nav>
+  <nav class="z-10">
     <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
       CryptoTracker
     </div>
