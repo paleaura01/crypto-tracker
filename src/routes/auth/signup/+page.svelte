@@ -29,13 +29,31 @@
   const LIFETIME_AMOUNT_USD = 50;
   const RECIPIENT_ADDRESS = 'BfzKVGt4WJLBcDbkyzX4Yn1VcAwbk7bF8xohJDHzMGVX';
 
-  $: paymentAmount = selectedPlan === 'monthly' ? MONTHLY_AMOUNT_USD : LIFETIME_AMOUNT_USD;
-  $: solanaAmount = paymentAmount / solanaPrice;
+  // 1) Compute USD amount
+  $: paymentAmount = selectedPlan === 'monthly'
+    ? MONTHLY_AMOUNT_USD
+    : LIFETIME_AMOUNT_USD;
 
- 
-  async function handleConnectWallet() {
+  // 2) Guard divide by zero
+  $: solanaAmount = solanaPrice > 0
+    ? paymentAmount / solanaPrice
+    : 0;
+
+  // fetch SOL/USD once on mount
+  onMount(async () => {
     try {
-      loading = true;
+      const res = await fetch('/api/solana-price');
+      const { price } = await res.json();
+      solanaPrice = price;
+    } catch {
+      message = 'Failed to fetch SOL price';
+    }
+  });
+
+  async function handleConnectWallet() {
+    loading = true;
+    message = '';
+    try {
       await connectSolflare();
       message = 'Wallet connected successfully!';
     } catch (error) {
@@ -46,166 +64,113 @@
   }
 
   async function handleSignUp() {
-    try {
-        loading = true;
-        if (!$walletStore.connected) {
-            throw new Error('Please connect your wallet first');
-        }
+    loading = true;
+    message = '';
 
-        console.log('Creating connection...');
-        const connection = new Connection(env.PUBLIC_SOLANA_RPC_URL, 'confirmed');
-        const recipientPubKey = new PublicKey(RECIPIENT_ADDRESS);
-        const lamports = Math.floor(solanaAmount * LAMPORTS_PER_SOL);
-
-        console.log('Getting latest blockhash...');
-        let blockhashObj;
-        try {
-            blockhashObj = await connection.getLatestBlockhash('finalized');
-            console.log('Blockhash:', blockhashObj.blockhash);
-        } catch (err) {
-            console.error('Error getting blockhash:', err);
-            throw new Error(`Failed to get blockhash: ${err.message}`);
-        }
-
-        console.log('Creating payment transaction...');
-        const transaction = new Transaction().add(
-            SystemProgram.transfer({
-                fromPubkey: new PublicKey($walletStore.publicKey),
-                toPubkey: recipientPubKey,
-                lamports,
-            })
-        );
-        transaction.recentBlockhash = blockhashObj.blockhash;
-        transaction.feePayer = new PublicKey($walletStore.publicKey);
-
-        console.log('Requesting signature...');
-        let signedTransaction;
-        try {
-            signedTransaction = await window.solflare.signTransaction(transaction);
-            console.log('Transaction signed successfully');
-        } catch (err) {
-            console.error('Error signing transaction:', err);
-            throw new Error(`Transaction signing failed: ${err.message}`);
-        }
-
-        let signature;
-        try {
-            signature = await connection.sendRawTransaction(signedTransaction.serialize());
-            console.log('Transaction sent:', signature);
-        } catch (err) {
-            if (err.message && err.message.includes('already been processed')) {
-                console.warn('Transaction already processed, attempting to retrieve logs...');
-                if (err.signature) {
-                    const logs = await connection.getLogs(err.signature);
-                    console.log('Transaction logs:', logs);
-                    signature = err.signature;
-                } else {
-                    console.error('No signature found in error, cannot get logs.');
-                    throw err;
-                }
-            } else {
-                console.error('Send transaction error:', err);
-                throw new Error(`Transaction failed: ${err.message}`);
-            }
-        }
-
-        console.log('Awaiting payment confirmation...');
-        const confirmation = await connection.confirmTransaction(signature);
-        console.log('Payment confirmation:', confirmation);
-        if (confirmation.value.err) {
-            throw new Error('Payment transaction failed to confirm');
-        }
-
-        console.log('Payment confirmed, creating user account...');
-        const { data: signupData, error: signupError } = await supabase.auth.signUp({
-            email,
-            password
-        });
-        
-        if (signupError) {
-            console.error('Signup error:', signupError);
-            throw new Error(signupError.message);
-        }
-
-        let userId = signupData?.user?.id;
-        if (!userId) {
-            console.log('User ID not found in signup data, fetching user...');
-            const { data: userData, error: userError } = await supabase.auth.getUser();
-            if (userError) {
-                console.error('Error fetching user:', userError);
-                throw new Error(userError.message);
-            }
-            userId = userData?.user?.id;
-        }
-
-        if (userId) {
-            console.log('Creating payment record...');
-            const currentPaymentAmount = selectedPlan === 'monthly' ? MONTHLY_AMOUNT_USD : LIFETIME_AMOUNT_USD;
-            try {
-                const res = await fetch('/api/create-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        amount: currentPaymentAmount,
-                        transaction_signature: signature,
-                        plan: selectedPlan,
-                        payment_address: RECIPIENT_ADDRESS,
-                        status: 'active'
-                    })
-                });
-                
-                const paymentResult = await res.json();
-                if (paymentResult.error) {
-                    console.error('Payment record creation error:', paymentResult.error);
-                    throw new Error(paymentResult.error);
-                }
-                console.log('Payment record created:', paymentResult);
-
-                console.log('Getting session for cookie...');
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                if (sessionError) {
-                    console.error('Session error:', sessionError);
-                    throw sessionError;
-                }
-
-                console.log('Setting session cookie...');
-                const res2 = await fetch('/api/set-session-cookie', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ session })
-                });
-
-                if (!res2.ok) {
-                    const errData = await res2.json();
-                    console.error('Cookie setting error:', errData);
-                    throw new Error(errData.error || 'Failed to set session cookie');
-                }
-
-                // Wait for cookie to be set
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                message = `Payment confirmed. Thank you for signing up with the ${
-                    selectedPlan === 'monthly' ? 'Monthly (30 days)' : 'Lifetime'
-                } plan!`;
-                
-                console.log('Signup complete, redirecting to dashboard...');
-                window.location.href = '/dashboard';
-            } catch (err) {
-                console.error('Payment record creation error:', err);
-                throw new Error(`Failed to create payment record: ${err.message}`);
-            }
-        } else {
-            throw new Error('Failed to retrieve user information.');
-        }
-    } catch (error) {
-        console.error('Overall signup error:', error);
-        message = error.message;
-    } finally {
-        loading = false;
+    // prevent Infinity lamports
+    if (solanaAmount <= 0) {
+      message = 'Please wait for the SOL price to load before subscribing.';
+      loading = false;
+      return;
     }
-}
+
+    try {
+      const ws = $walletStore;
+      if (!ws.connected) {
+        throw new Error('Please connect your wallet first');
+      }
+
+      // sanitize URL so "/?api-key" → "?api-key"
+      const rpcUrl = env.PUBLIC_SOLANA_RPC_URL.replace(/\/\?/, '?');
+      const connection = new Connection(rpcUrl, 'confirmed');
+
+      const recipientPubKey = new PublicKey(RECIPIENT_ADDRESS);
+      const lamports = Math.floor(solanaAmount * LAMPORTS_PER_SOL);
+
+      const { blockhash } = await connection.getLatestBlockhash('finalized');
+
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: new PublicKey(ws.publicKey),
+          toPubkey: recipientPubKey,
+          lamports
+        })
+      );
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = new PublicKey(ws.publicKey);
+
+      const signedTransaction = await window.solflare.signTransaction(transaction);
+      let signature = await connection.sendRawTransaction(signedTransaction.serialize());
+      const confirmation = await connection.confirmTransaction(signature);
+      if (confirmation.value.err) {
+        throw new Error('Payment transaction failed to confirm');
+      }
+
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({
+        email,
+        password
+      });
+      if (signupError) {
+        throw new Error(signupError.message);
+      }
+
+      let userId = signupData?.user?.id;
+      if (!userId) {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          throw new Error(userError.message);
+        }
+        userId = userData?.user?.id;
+      }
+
+      // record payment
+      const res = await fetch('/api/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          amount: paymentAmount,
+          transaction_signature: signature,
+          plan: selectedPlan,
+          payment_address: RECIPIENT_ADDRESS,
+          status: 'active'
+        })
+      });
+      const paymentResult = await res.json();
+      if (paymentResult.error) {
+        throw new Error(paymentResult.error);
+      }
+
+      // set session cookie
+      const {
+        data: { session },
+        error: sessionError
+      } = await supabase.auth.getSession();
+      if (sessionError) {
+        throw sessionError;
+      }
+      const res2 = await fetch('/api/set-session-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ session })
+      });
+      if (!res2.ok) {
+        const errData = await res2.json();
+        throw new Error(errData.error || 'Failed to set session cookie');
+      }
+
+      message = `Payment confirmed. Thank you for signing up with the ${
+        selectedPlan === 'monthly' ? 'Monthly (30 days)' : 'Lifetime'
+      } plan!`;
+      goto('/dashboard');
+    } catch (error) {
+      console.error('Overall signup error:', error);
+      message = error.message;
+    } finally {
+      loading = false;
+    }
+  }
 </script>
 
 <h1>Sign Up</h1>
@@ -237,10 +202,12 @@
         name="plan"
         value="monthly"
         bind:group={selectedPlan}
-      >
+      />
       <label for="monthly">
         <span class="plan-title">Monthly Plan</span>
-        <span class="plan-price">$5/30days (≈ {(MONTHLY_AMOUNT_USD / solanaPrice).toFixed(4)} SOL)</span>
+        <span class="plan-price">
+          $5/30days (≈ {(MONTHLY_AMOUNT_USD / solanaPrice).toFixed(4)} SOL)
+        </span>
       </label>
     </div>
     <div class="radio-option">
@@ -250,13 +217,15 @@
         name="plan"
         value="lifetime"
         bind:group={selectedPlan}
-      >
+      />
       <label for="lifetime">
         <span class="plan-title">Lifetime Access</span>
-        <span class="plan-price">${LIFETIME_AMOUNT_USD} one-time payment (≈ {(LIFETIME_AMOUNT_USD / solanaPrice).toFixed(4)} SOL)</span>
+        <span class="plan-price">
+          ${LIFETIME_AMOUNT_USD} one-time (≈ {(LIFETIME_AMOUNT_USD / solanaPrice).toFixed(4)} SOL)
+        </span>
       </label>
     </div>
-  </div>
+
 
   <button
     type="button"
@@ -265,7 +234,7 @@
     class="wallet-button"
   >
     {#if $walletStore.connected}
-      Connected: {$walletStore.publicKey.slice(0, 4)}...{$walletStore.publicKey.slice(-4)}
+      Connected: {$walletStore.publicKey.slice(0, 4)}…{$walletStore.publicKey.slice(-4)}
     {:else}
       Connect Solflare Wallet
     {/if}
@@ -289,7 +258,7 @@
     disabled={loading || !$walletStore.connected}
     style="opacity: {$walletStore.connected ? '1' : '0.5'}"
   >
-    {loading ? 'Loading...' : 'Subscribe & Sign Up'}
+    {loading ? 'Loading…' : 'Subscribe & Sign Up'}
   </button>
 </form>
 
