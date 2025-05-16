@@ -3,6 +3,7 @@
     "compilerOptions": {
       "strict": true,
       "useUnknownInCatchVariables": false,
+      "forceConsistentCasingInFileNames": true,
       "verbatimModuleSyntax": true,
       "isolatedModules":      true,
       "preserveValueImports": false

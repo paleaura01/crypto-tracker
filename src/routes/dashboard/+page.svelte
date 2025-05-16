@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
-  import type { Session } from '@supabase/supabase-js';
 
   // now `data.isAdmin` comes from the server load
   export let data: {

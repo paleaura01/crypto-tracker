@@ -1,3 +1,5 @@
+// src\routes\api\admin\delete-user\+server.js
+
 import { json } from '@sveltejs/kit';
 
 export async function POST({ request, locals }) {
