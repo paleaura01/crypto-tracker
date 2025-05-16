@@ -4,7 +4,7 @@
 </svelte:head>
 
 <script>
-  import { supabase } from '$lib/supabase';
+  import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
   import { walletStore, connectSolflare, requestAirdrop } from '$lib/stores/wallet';
   import { onMount } from 'svelte';

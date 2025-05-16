@@ -1,10 +1,10 @@
-import { defineConfig } from 'vite';
+import { defineConfig, UserConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
 
-export default defineConfig({
+const config: UserConfig = {
   plugins: [sveltekit()],
   resolve: {
     alias: {
@@ -15,7 +15,7 @@ export default defineConfig({
       path: 'rollup-plugin-polyfill-node/polyfills/path',
       querystring: 'rollup-plugin-polyfill-node/polyfills/qs',
       url: 'url-parse',
-	  punycode: '@node-rs/helper-darwin-x64',
+      punycode: '@node-rs/helper-darwin-x64',
       string_decoder: 'rollup-plugin-polyfill-node/polyfills/string-decoder',
       http: 'rollup-plugin-polyfill-node/polyfills/http',
       https: 'rollup-plugin-polyfill-node/polyfills/http',
@@ -31,23 +31,18 @@ export default defineConfig({
   },
   optimizeDeps: {
     esbuildOptions: {
-      define: {
-        global: 'globalThis'
-      },
+      define: { global: 'globalThis' },
       plugins: [
-        NodeGlobalsPolyfillPlugin({
-          process: true,
-          buffer: true
-        }),
+        NodeGlobalsPolyfillPlugin({ process: true, buffer: true }),
         NodeModulesPolyfillPlugin()
       ]
     }
   },
   build: {
     rollupOptions: {
-      plugins: [
-        rollupNodePolyFill()
-      ]
+      plugins: [rollupNodePolyFill()]
     }
   }
-});
+};
+
+export default defineConfig(config);

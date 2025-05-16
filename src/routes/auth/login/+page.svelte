@@ -3,7 +3,7 @@
 </svelte:head>
 
 <script>
-  import { supabase } from '$lib/supabase';
+  import { supabase } from '$lib/supabaseClient';
   let email = '';
   let password = '';
   let loading = false;
