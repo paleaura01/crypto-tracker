@@ -1,8 +1,8 @@
 <!-- src/routes/+layout.svelte -->
-
 <script lang="ts">
   import '../app.css';
   import { onMount } from 'svelte';
+  import { invalidateAll } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
   import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
@@ -33,6 +33,7 @@
   }
 
   onMount(() => {
+    // restore or init theme
     const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (saved) applyTheme(saved);
     else
@@ -42,18 +43,17 @@
           : 'light'
       );
 
-    // subscribe to session changes (for UI updates)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        // no client-side admin check needed
+    // whenever auth state changes on the client, re-run your server load()
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, newSession: Session | null) => {
+        // trigger a full reload of all load() fns (including +layout.server.ts)
+        
+         invalidateAll();
       }
-      const { data } = supabase.auth.onAuthStateChange(
-        (_e: AuthChangeEvent, newSession: Session | null) => {
-          // session and userEmail/isAdmin remain server-driven
-        }
-      );
-      authUnsub = data.subscription;
-    });
+    );
+    authUnsub = subscription;
 
     return () => authUnsub?.unsubscribe();
   });
