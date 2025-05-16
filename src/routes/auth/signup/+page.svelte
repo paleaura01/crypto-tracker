@@ -1,13 +1,8 @@
-<!-- src/routes/auth/signup/+page.svelte -->
-<svelte:head>
-  <title>Sign Up | Crypto Tracker</title>
-</svelte:head>
-
-<script>
-  import { supabase } from '$lib/supabaseClient';
-  import { goto } from '$app/navigation';
-  import { walletStore, connectSolflare, requestAirdrop } from '$lib/stores/wallet';
+<script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { supabase } from '$lib/supabaseClient';
+  import { walletStore, connectSolflare, requestAirdrop } from '$lib/stores/wallet';
   import { env } from '$env/dynamic/public';
   import {
     Connection,
@@ -16,48 +11,48 @@
     Transaction,
     SystemProgram
   } from '@solana/web3.js';
+  import { get } from 'svelte/store';
 
+  let mounted = false;
   let email = '';
   let password = '';
   let loading = false;
   let message = '';
+
   let solanaPrice = 0;
   let solanaAmount = 0;
-  let selectedPlan = 'monthly'; // default to monthly plan
+  let selectedPlan: 'monthly' | 'lifetime' = 'monthly';
 
   const MONTHLY_AMOUNT_USD = 5;
   const LIFETIME_AMOUNT_USD = 50;
   const RECIPIENT_ADDRESS = 'BfzKVGt4WJLBcDbkyzX4Yn1VcAwbk7bF8xohJDHzMGVX';
 
-  // 1) Compute USD amount
-  $: paymentAmount = selectedPlan === 'monthly'
-    ? MONTHLY_AMOUNT_USD
-    : LIFETIME_AMOUNT_USD;
+  // compute solanaAmount reactively
+  $: {
+    const paymentAmount = selectedPlan === 'monthly'
+      ? MONTHLY_AMOUNT_USD
+      : LIFETIME_AMOUNT_USD;
+    solanaAmount = solanaPrice > 0 ? paymentAmount / solanaPrice : 0;
+  }
 
-  // 2) Guard divide by zero
-  $: solanaAmount = solanaPrice > 0
-    ? paymentAmount / solanaPrice
-    : 0;
-
-  // fetch SOL/USD once on mount
   onMount(async () => {
+    mounted = true;
     try {
       const res = await fetch('/api/solana-price');
       const { price } = await res.json();
       solanaPrice = price;
     } catch {
-      message = 'Failed to fetch SOL price';
+      message = 'Failed to fetch SOL price.';
     }
   });
 
   async function handleConnectWallet() {
-    loading = true;
-    message = '';
+    loading = true; message = '';
     try {
       await connectSolflare();
-      message = 'Wallet connected successfully!';
-    } catch (error) {
-      message = error.message;
+      message = 'Wallet connected!';
+    } catch (err: any) {
+      message = err.message;
     } finally {
       loading = false;
     }
@@ -67,292 +62,194 @@
     loading = true;
     message = '';
 
-    // prevent Infinity lamports
     if (solanaAmount <= 0) {
-      message = 'Please wait for the SOL price to load before subscribing.';
+      message = 'Waiting for SOL price…';
+      loading = false;
+      return;
+    }
+
+    const ws = get(walletStore);
+    if (!ws.connected || !ws.publicKey) {
+      message = 'Please connect your wallet first.';
       loading = false;
       return;
     }
 
     try {
-      const ws = $walletStore;
-      if (!ws.connected) {
-        throw new Error('Please connect your wallet first');
-      }
-
-      // sanitize URL so "/?api-key" → "?api-key"
-      const rpcUrl = env.PUBLIC_SOLANA_RPC_URL.replace(/\/\?/, '?');
-      const connection = new Connection(rpcUrl, 'confirmed');
-
-      const recipientPubKey = new PublicKey(RECIPIENT_ADDRESS);
+      // build & send SOL transfer
+      const conn = new Connection(env.PUBLIC_SOLANA_RPC_URL.replace(/\/\?/, '?'), 'confirmed');
+      const fromPub = new PublicKey(ws.publicKey);
+      const toPub = new PublicKey(RECIPIENT_ADDRESS);
       const lamports = Math.floor(solanaAmount * LAMPORTS_PER_SOL);
-
-      const { blockhash } = await connection.getLatestBlockhash('finalized');
-
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: new PublicKey(ws.publicKey),
-          toPubkey: recipientPubKey,
-          lamports
-        })
+      const { blockhash } = await conn.getLatestBlockhash();
+      const tx = new Transaction().add(
+        SystemProgram.transfer({ fromPubkey: fromPub, toPubkey: toPub, lamports })
       );
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = new PublicKey(ws.publicKey);
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = fromPub;
 
-      const signedTransaction = await window.solflare.signTransaction(transaction);
-      let signature = await connection.sendRawTransaction(signedTransaction.serialize());
-      const confirmation = await connection.confirmTransaction(signature);
-      if (confirmation.value.err) {
-        throw new Error('Payment transaction failed to confirm');
-      }
+      // narrow window.solflare
+      const solflare = (window as any).solflare as {
+        signTransaction(tx: Transaction): Promise<Transaction>;
+      } | undefined;
+      if (!solflare) throw new Error('Solflare not available');
+      const signed = await solflare.signTransaction(tx);
 
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({
-        email,
-        password
-      });
-      if (signupError) {
-        throw new Error(signupError.message);
-      }
+      const sig = await conn.sendRawTransaction(signed.serialize());
+      const conf = await conn.confirmTransaction(sig);
+      if (conf.value.err) throw new Error('Payment failed to confirm.');
 
-      let userId = signupData?.user?.id;
+      // sign up user
+      const { data: suData, error: suErr } = await supabase.auth.signUp({ email, password });
+      if (suErr) throw suErr;
+
+      let userId = suData.user?.id;
       if (!userId) {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError) {
-          throw new Error(userError.message);
-        }
-        userId = userData?.user?.id;
+        const { data: guData, error: guErr } = await supabase.auth.getUser();
+        if (guErr) throw guErr;
+        userId = guData.user?.id!;
       }
 
       // record payment
-      const res = await fetch('/api/create-payment', {
+      const payRes = await fetch('/api/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userId,
-          amount: paymentAmount,
-          transaction_signature: signature,
-          plan: selectedPlan,
-          payment_address: RECIPIENT_ADDRESS,
-          status: 'active'
+          amount: selectedPlan === 'monthly' ? MONTHLY_AMOUNT_USD : LIFETIME_AMOUNT_USD,
+          transaction_signature: sig,
+          plan: selectedPlan
         })
       });
-      const paymentResult = await res.json();
-      if (paymentResult.error) {
-        throw new Error(paymentResult.error);
-      }
+      const payJson = await payRes.json();
+      if (payJson.error) throw new Error(payJson.error);
 
       // set session cookie
-      const {
-        data: { session },
-        error: sessionError
-      } = await supabase.auth.getSession();
-      if (sessionError) {
-        throw sessionError;
-      }
-      const res2 = await fetch('/api/set-session-cookie', {
+      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      if (sessErr) throw sessErr;
+      const setRes = await fetch('/api/set-session-cookie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({ session })
       });
-      if (!res2.ok) {
-        const errData = await res2.json();
-        throw new Error(errData.error || 'Failed to set session cookie');
+      if (!setRes.ok) {
+        const errJson = await setRes.json();
+        throw new Error(errJson.error);
       }
 
-      message = `Payment confirmed. Thank you for signing up with the ${
-        selectedPlan === 'monthly' ? 'Monthly (30 days)' : 'Lifetime'
-      } plan!`;
       goto('/dashboard');
-    } catch (error) {
-      console.error('Overall signup error:', error);
-      message = error.message;
+    } catch (err: any) {
+      console.error(err);
+      message = err.message;
     } finally {
       loading = false;
     }
   }
 </script>
 
-<h1>Sign Up</h1>
 
-<form on:submit|preventDefault={handleSignUp}>
-  <input
-    type="email"
-    bind:value={email}
-    placeholder="Email"
-    autocomplete="email"
-    required
-    style="display: block; margin-bottom: 1rem;"
-  />
-  <input
-    type="password"
-    bind:value={password}
-    placeholder="Password"
-    autocomplete="new-password"
-    required
-    style="display: block; margin-bottom: 1rem;"
-  />
+<form
+  class="max-w-md mx-auto mt-12 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg"
+  on:submit|preventDefault={handleSignUp}
+>
+  <h1 class="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">
+    Sign Up
+  </h1>
 
-  <div class="subscription-options">
-    <h3>Choose your plan:</h3>
-    <div class="radio-option">
+  <div class="space-y-4">
+    <input
+      type="email"
+      bind:value={email}
+      placeholder="Email"
+      autocomplete="email"
+      class="w-full px-4 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+      required
+    />
+    <input
+      type="password"
+      bind:value={password}
+      placeholder="Password"
+      autocomplete="new-password"
+      class="w-full px-4 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+      required
+    />
+  </div>
+
+  <fieldset class="mt-6 mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded">
+    <legend class="font-medium text-gray-800 dark:text-gray-200 mb-2">
+      Choose your plan
+    </legend>
+    <label class="flex items-center mb-2 space-x-3 cursor-pointer">
       <input
         type="radio"
-        id="monthly"
         name="plan"
         value="monthly"
         bind:group={selectedPlan}
+        class="form-radio text-green-500"
       />
-      <label for="monthly">
-        <span class="plan-title">Monthly Plan</span>
-        <span class="plan-price">
-          $5/30days (≈ {(MONTHLY_AMOUNT_USD / solanaPrice).toFixed(4)} SOL)
-        </span>
-      </label>
-    </div>
-    <div class="radio-option">
+      <span class="text-gray-900 dark:text-gray-100">
+        Monthly – $5
+        {#if mounted && solanaAmount > 0}
+          (≈ {solanaAmount.toFixed(4)} SOL)
+        {/if}
+      </span>
+    </label>
+    <label class="flex items-center space-x-3 cursor-pointer">
       <input
         type="radio"
-        id="lifetime"
         name="plan"
         value="lifetime"
         bind:group={selectedPlan}
+        class="form-radio text-green-500"
       />
-      <label for="lifetime">
-        <span class="plan-title">Lifetime Access</span>
-        <span class="plan-price">
-          ${LIFETIME_AMOUNT_USD} one-time (≈ {(LIFETIME_AMOUNT_USD / solanaPrice).toFixed(4)} SOL)
-        </span>
-      </label>
-    </div>
+      <span class="text-gray-900 dark:text-gray-100">
+        Lifetime – $50
+        {#if mounted && solanaAmount > 0}
+          (≈ {solanaAmount.toFixed(4)} SOL)
+        {/if}
+      </span>
+    </label>
+  </fieldset>
 
-
-  <button
-    type="button"
-    on:click={handleConnectWallet}
-    disabled={loading}
-    class="wallet-button"
-  >
-    {#if $walletStore.connected}
-      Connected: {$walletStore.publicKey.slice(0, 4)}…{$walletStore.publicKey.slice(-4)}
-    {:else}
-      Connect Solflare Wallet
-    {/if}
-  </button>
-
-  {#if $walletStore.connected}
-    <p class="balance">Balance: {$walletStore.balance} SOL</p>
+  {#if mounted}
     <button
       type="button"
-      on:click={() => requestAirdrop()}
-      class="airdrop-button"
+      on:click={handleConnectWallet}
+      class="w-full mb-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded disabled:opacity-50"
       disabled={loading}
     >
-      Request Devnet SOL
+      {#if $walletStore.connected && $walletStore.publicKey}
+        Connected: {$walletStore.publicKey.slice(0,4)}…{$walletStore.publicKey.slice(-4)}
+      {:else}
+        Connect Wallet
+      {/if}
     </button>
+
+    {#if $walletStore.connected && $walletStore.publicKey}
+      <div class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+        Balance: {$walletStore.balance} SOL
+      </div>
+      <button
+        type="button"
+        on:click={requestAirdrop}
+        class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+        disabled={loading}
+      >
+        Request Airdrop
+      </button>
+    {/if}
   {/if}
 
   <button
     type="submit"
-    class="signup-button"
+    class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-semibold rounded disabled:opacity-50"
     disabled={loading || !$walletStore.connected}
-    style="opacity: {$walletStore.connected ? '1' : '0.5'}"
   >
-    {loading ? 'Loading…' : 'Subscribe & Sign Up'}
+    {loading ? 'Processing…' : 'Subscribe & Sign Up'}
   </button>
+
+  {#if message}
+    <p class="mt-4 text-center text-red-500">{message}</p>
+  {/if}
 </form>
-
-<p class="message">{message}</p>
-
-<style>
-  .wallet-button {
-    background: #9945FF;
-    color: white;
-    padding: 0.8rem 1.6rem;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-  .wallet-button:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-  .airdrop-button {
-    width: 100%;
-    padding: 0.8rem;
-    background: #9945FF;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    margin: 0.5rem 0;
-    cursor: pointer;
-  }
-  .airdrop-button:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-  .signup-button {
-    width: 100%;
-    padding: 0.8rem;
-    background: #14F195;
-    color: black;
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.3s ease;
-  }
-  .signup-button:disabled {
-    cursor: not-allowed;
-  }
-  .balance {
-    margin: 0.5rem 0 1rem 0;
-    font-size: 0.9rem;
-    color: #666;
-  }
-  .message {
-    margin-top: 1rem;
-    color: #666;
-  }
-  .subscription-options {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: #f5f5f5;
-    border-radius: 4px;
-  }
-  .subscription-options h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
-  }
-  .radio-option {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    padding: 0.5rem;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-  .radio-option:hover {
-    background-color: #eaeaea;
-  }
-  .radio-option input[type="radio"] {
-    margin-top: 0.25rem;
-    margin-right: 0.75rem;
-    cursor: pointer;
-  }
-  .radio-option label {
-    display: flex;
-    flex-direction: column;
-    cursor: pointer;
-  }
-  .plan-title {
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-  }
-  .plan-price {
-    font-size: 0.9rem;
-    color: #666;
-  }
-</style>
