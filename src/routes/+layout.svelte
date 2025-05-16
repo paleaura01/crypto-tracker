@@ -1,29 +1,25 @@
+<!-- src/routes/+layout.svelte -->
+
 <script lang="ts">
   import '../app.css';
   import { onMount } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
-  let userEmail: string | undefined;
-  let isAdmin = false;
+  // receive from +layout.server.ts
+  export let data: {
+    userEmail: string | null;
+    isAdmin: boolean;
+  };
+
   let theme: 'light' | 'dark' = 'light';
   let authUnsub: { unsubscribe(): void };
 
-  async function checkAdmin(userId: string) {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('user_id', userId);
-    isAdmin = !error && !!data?.length;
-  }
-
-  function handleSignOut() {
-    supabase.auth.signOut();
+  async function handleSignOut() {
+    // proxy through our own endpoint
+    await fetch('/auth/logout', { method: 'POST' });
     localStorage.removeItem('theme');
-    fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' })
-      .then(() => {
-        window.location.href = '/';
-      });
+    window.location.href = '/';
   }
 
   function applyTheme(t: 'light' | 'dark') {
@@ -46,27 +42,20 @@
           : 'light'
       );
 
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        userEmail = session.user.email;
-        await checkAdmin(session.user.id);
+    // subscribe to session changes (for UI updates)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // no client-side admin check needed
       }
       const { data } = supabase.auth.onAuthStateChange(
-        async (_e: AuthChangeEvent, newSession: Session | null) => {
-          if (newSession?.user) {
-            userEmail = newSession.user.email;
-            await checkAdmin(newSession.user.id);
-          } else {
-            userEmail = undefined;
-            isAdmin = false;
-          }
+        (_e: AuthChangeEvent, newSession: Session | null) => {
+          // session and userEmail/isAdmin remain server-driven
         }
       );
       authUnsub = data.subscription;
-    })();
+    });
 
-    return () => authUnsub.unsubscribe();
+    return () => authUnsub?.unsubscribe();
   });
 </script>
 
@@ -86,7 +75,7 @@
       <a href="/transactions" class="hover:text-blue-600 dark:hover:text-blue-300">
         Transactions
       </a>
-      {#if isAdmin}
+      {#if data.isAdmin}
         <a href="/admin" class="text-red-500 dark:text-red-400 hover:underline">
           Admin
         </a>
@@ -102,9 +91,10 @@
         {#if theme === 'dark'}☀️{:else}🌙{/if}
       </button>
 
-      {#if userEmail}
+      {#if data.userEmail}
         <span>
-          {userEmail}{#if isAdmin}<span class="text-red-500"> (Admin)</span>{/if}
+          {data.userEmail}
+          {#if data.isAdmin}<span class="text-red-500"> (Admin)</span>{/if}
         </span>
         <button on:click={handleSignOut} class="btn btn-primary">
           Sign Out
