@@ -7,6 +7,6 @@
       "isolatedModules":      true,
       "preserveValueImports": false
     },
-    "include": ["src/**/*", "src/node_modules/**/*",  "env.d.ts", "src/app.d.ts"]
+    "include": ["src/**/*", "src/node_modules/**/*",  "env.d.ts", "global.d.ts", "src/app.d.ts"]
   }
   

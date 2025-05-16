@@ -4,6 +4,7 @@
 declare module '$env/static/public' {
   export const PUBLIC_SUPABASE_URL: string;
   export const PUBLIC_SUPABASE_ANON_KEY: string;
+  export const PUBLIC_SOLANA_RPC_URL: string;
   // add any other PUBLIC_* vars you use here
 }
 

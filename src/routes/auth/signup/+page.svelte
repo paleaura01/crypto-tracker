@@ -32,21 +32,7 @@
   $: paymentAmount = selectedPlan === 'monthly' ? MONTHLY_AMOUNT_USD : LIFETIME_AMOUNT_USD;
   $: solanaAmount = paymentAmount / solanaPrice;
 
-  onMount(async () => {
-    try {
-      const response = await fetch('/api/solana-price');
-      const { price } = await response.json();
-      solanaPrice = price;
-      solanaAmount = paymentAmount / solanaPrice;
-      const isConnected = await testRPCConnection();
-      if (!isConnected) {
-        message = 'Failed to connect to Solana network';
-      }
-    } catch (err) {
-      message = 'Failed to fetch Solana price';
-    }
-  });
-
+ 
   async function handleConnectWallet() {
     try {
       loading = true;
