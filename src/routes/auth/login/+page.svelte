@@ -1,94 +1,95 @@
-<!-- no need to re-import app.css here, it comes from your root +layout.svelte -->
+<!-- src/routes/auth/login/+page.svelte -->
 <svelte:head>
-  <title>Log In | Crypto Tracker</title>
+  <title>Log In | CryptoTracker</title>
 </svelte:head>
 
 <script lang="ts">
-  import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
+  import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
 
-  let mounted = false;
   let email = '';
   let password = '';
   let loading = false;
   let message = '';
 
-  onMount(() => {
-    // ensure we only render after hydration (avoids flicker)
-    mounted = true;
-  });
-
   async function handleLogin() {
     loading = true;
     message = '';
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      if (!data.session) throw new Error('No session returned');
-
-      const res = await fetch('/api/set-session-cookie', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session: data.session })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to set session cookie');
-      }
-
-      goto('/dashboard');
-    } catch (err: any) {
-      console.error('Login error:', err);
-      message = err.message;
-    } finally {
+    // 1) Sign in
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    if (signInError) {
+      message = signInError.message;
       loading = false;
+      return;
     }
+
+    // 2) Grab the new session
+    const {
+      data: { session },
+      error: getSessionError
+    } = await supabase.auth.getSession();
+    if (getSessionError || !session) {
+      message = getSessionError?.message ?? 'Failed to retrieve session.';
+      loading = false;
+      return;
+    }
+
+    // 3) Set the session cookie via your endpoint
+    const res = await fetch('/api/set-session-cookie', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      message = err.error || 'Failed to set session cookie.';
+      loading = false;
+      return;
+    }
+
+    // 4) Navigate to dashboard, re-running all loads (so your layout picks up data.userEmail/data.isAdmin)
+    goto('/dashboard', { replaceState: true, invalidateAll: true });
   }
 </script>
 
-{#if mounted}
-<main>
-  <form
-    on:submit|preventDefault={handleLogin}
-    class="max-w-md mx-auto mt-12 p-8 rounded-lg shadow-lg"
-  >
-    <h2 class="text-2xl font-semibold mb-6">
-      Welcome back
-    </h2>
+<main class="max-w-md mx-auto mt-16 p-6 rounded-lg shadow-lg">
+  <h1 class="text-2xl font-semibold mb-6 text-center">Welcome back</h1>
 
-    <div class="space-y-4 mb-6">
-      <input
-        type="email"
-        bind:value={email}
-        placeholder="Email"
-        autocomplete="email"
-        class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2"
-        required
-      />
-      <input
-        type="password"
-        bind:value={password}
-        placeholder="Password"
-        autocomplete="current-password"
-        class="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2"
-        required
-      />
-    </div>
+  <form on:submit|preventDefault={handleLogin} class="space-y-4">
+    <input
+      type="email"
+      bind:value={email}
+      placeholder="Email"
+      autocomplete="email"
+      class="w-full px-4 py-2 border rounded border-gray-300"
+      required
+    />
+
+    <input
+      type="password"
+      bind:value={password}
+      placeholder="Password"
+      autocomplete="current-password"
+      class="w-full px-4 py-2 border rounded border-gray-300"
+      required
+    />
 
     <button
       type="submit"
-      class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded disabled:opacity-50 transition"
+      class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded disabled:opacity-50 transition"
       disabled={loading}
     >
-      {#if loading}Logging in…{:else}Log In{/if}
+      {loading ? 'Logging in…' : 'Log In'}
     </button>
-
-    {#if message}
-      <p class="mt-4 text-center text-red-500">{message}</p>
-    {/if}
   </form>
+
+  {#if message}
+    <p class="mt-4 text-center text-red-500">{message}</p>
+  {/if}
 </main>
-{/if}

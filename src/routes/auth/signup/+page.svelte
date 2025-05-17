@@ -137,7 +137,7 @@
         throw new Error(errJson.error);
       }
 
-      goto('/dashboard');
+goto('/dashboard', { replaceState: true, invalidateAll: true });
     } catch (err: any) {
       console.error(err);
       message = err.message;
@@ -149,11 +149,10 @@
 
 <main>
   <div class="max-w-md mx-auto mt-12 p-6 rounded-lg shadow-lg">
-    <h1 class="text-2xl font-semibold mb-4">
-      Sign Up
-    </h1>
+    <h1 class="text-2xl font-semibold mb-4">Sign Up</h1>
 
-    <div class="space-y-4 mb-6">
+    <!-- WRAP INPUTS & BUTTON IN A FORM -->
+    <form on:submit|preventDefault={handleSignUp} class="space-y-4 mb-6">
       <input
         type="email"
         bind:value={email}
@@ -170,76 +169,75 @@
         class="w-full px-4 py-2 border rounded border-gray-500"
         required
       />
-    </div>
 
-    <fieldset class="p-4 rounded mb-6 0">
-      <legend class="font-medium  mb-2">
-        Choose your plan
-      </legend>
-      <label class="flex items-center mb-2 space-x-3 cursor-pointer">
-        <input
-          type="radio"
-          name="plan"
-          value="monthly"
-          bind:group={selectedPlan}
-          class="form-radio text-green-500"
-        />
-        <span class="">
-          Monthly – $5
-          {#if mounted && solanaAmount > 0} (≈ {solanaAmount.toFixed(4)} SOL){/if}
-        </span>
-      </label>
-      <label class="flex items-center space-x-3 cursor-pointer">
-        <input
-          type="radio"
-          name="plan"
-          value="lifetime"
-          bind:group={selectedPlan}
-          class="form-radio text-green-500"
-        />
-        <span class="">
-          Lifetime – $50
-          {#if mounted && solanaAmount > 0} (≈ {solanaAmount.toFixed(4)} SOL){/if}
-        </span>
-      </label>
-    </fieldset>
+      <fieldset class="p-4 rounded mb-6">
+        <legend class="font-medium mb-2">Choose your plan</legend>
+        <label class="flex items-center mb-2 space-x-3 cursor-pointer">
+          <input
+            type="radio"
+            name="plan"
+            value="monthly"
+            bind:group={selectedPlan}
+            class="form-radio text-green-500"
+          />
+          <span>
+            Monthly – $5
+            {#if mounted && solanaAmount > 0} (≈ {solanaAmount.toFixed(4)} SOL){/if}
+          </span>
+        </label>
+        <label class="flex items-center space-x-3 cursor-pointer">
+          <input
+            type="radio"
+            name="plan"
+            value="lifetime"
+            bind:group={selectedPlan}
+            class="form-radio text-green-500"
+          />
+          <span>
+            Lifetime – $50
+            {#if mounted && solanaAmount > 0} (≈ {solanaAmount.toFixed(4)} SOL){/if}
+          </span>
+        </label>
+      </fieldset>
 
-    {#if mounted}
-      <button
-        type="button"
-        on:click={handleConnectWallet}
-        class="w-full mb-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded disabled:opacity-50"
-        disabled={loading}
-      >
-        {#if $walletStore.connected && $walletStore.publicKey}
-          Connected: {$walletStore.publicKey.slice(0,4)}…{$walletStore.publicKey.slice(-4)}
-        {:else}
-          Connect Wallet
-        {/if}
-      </button>
-
-      {#if $walletStore.connected && $walletStore.publicKey}
-        <div class="text-sm text-gray-700 dark:text-gray-300 mb-4">
-          Balance: {$walletStore.balance} SOL
-        </div>
+      {#if mounted}
         <button
           type="button"
-          on:click={requestAirdrop}
-          class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+          on:click={handleConnectWallet}
+          class="w-full mb-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded disabled:opacity-50"
           disabled={loading}
         >
-          Request Airdrop
+          {#if $walletStore.connected && $walletStore.publicKey}
+            Connected: {$walletStore.publicKey.slice(0,4)}…{$walletStore.publicKey.slice(-4)}
+          {:else}
+            Connect Wallet
+          {/if}
         </button>
-      {/if}
-    {/if}
 
-    <button
-      on:click={handleSignUp}
-      class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-semibold rounded disabled:opacity-50 transition"
-      disabled={loading || !get(walletStore).connected}
-    >
-      {loading ? 'Processing…' : 'Subscribe & Sign Up'}
-    </button>
+        {#if $walletStore.connected && $walletStore.publicKey}
+          <div class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+            Balance: {$walletStore.balance} SOL
+          </div>
+          <button
+            type="button"
+            on:click={requestAirdrop}
+            class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+            disabled={loading}
+          >
+            Request Airdrop
+          </button>
+        {/if}
+      {/if}
+
+      <!-- now this button submits the form -->
+      <button
+        type="submit"
+        class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-semibold rounded disabled:opacity-50 transition"
+        disabled={loading || !get(walletStore).connected}
+      >
+        {loading ? 'Processing…' : 'Subscribe & Sign Up'}
+      </button>
+    </form>
 
     {#if message}
       <p class="mt-4 text-center text-red-500">{message}</p>
