@@ -17,7 +17,6 @@ const V2_PATH     = '/api/v2/accounts';
 const V3_PATH     = '/api/v3/brokerage/accounts';
 const CB_VERSION  = '2025-01-01';
 
-// now pointing at your ECDSA JSON
 const CDP_KEY_FILE = 'cdp_api_keyEd25519.json';
 
 let cachedJwk: JWK | null = null;
