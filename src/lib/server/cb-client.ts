@@ -84,7 +84,9 @@ export async function fetchWalletBalances(): Promise<WalletAccount[]> {
   return data;
 }
 
-// stubbed loans
-export async function fetchLoanData(): Promise<LoanData> {
+
+// after
+export async function fetchLoanData(): Promise<LoanData | null> {
+  // still stubbed……
   return null;
 }
