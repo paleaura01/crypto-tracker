@@ -5,13 +5,9 @@
   import { invalidateAll, goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
 
-  // these come straight from +layout.server.ts on every load()
-  export let data: {
-    userEmail: string | null;
-    isAdmin: boolean;
-  };
+  export let data: { userEmail: string | null; isAdmin: boolean };
 
-  // theme logic (unchanged)
+  // theme
   let theme: 'light' | 'dark' = 'light';
   function applyTheme(t: 'light' | 'dark') {
     document.documentElement.classList.toggle('dark', t === 'dark');
@@ -22,73 +18,177 @@
     applyTheme(theme === 'dark' ? 'light' : 'dark');
   }
 
+  // mobile menu
+  let menuOpen = false;
+  function toggleMenu() {
+    menuOpen = !menuOpen;
+  }
+
+  // sign-out
   async function handleSignOut() {
     await fetch('/auth/logout', { method: 'POST' });
-    localStorage.removeItem('theme');
-    invalidateAll();              // re-run layout.server.ts
+    invalidateAll();
     goto('/', { replaceState: true });
   }
 
   onMount(() => {
-    // init theme
     const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (saved) applyTheme(saved);
-    else
-      applyTheme(
-        window.matchMedia('(prefers-color-scheme: dark)').matches
+    applyTheme(
+      saved ??
+        (window.matchMedia('(prefers-color-scheme: dark)').matches
           ? 'dark'
-          : 'light'
-      );
+          : 'light')
+    );
 
-    // on any auth change (login, logout, token refresh):
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange(() => {
-      invalidateAll();            // re-run layout.server.ts
-    });
-
+    } = supabase.auth.onAuthStateChange(() => invalidateAll());
     return () => subscription.unsubscribe();
   });
 </script>
 
 <div class="min-h-screen flex flex-col">
-  <nav class="z-10 flex items-center justify-between p-4  shadow">
-    <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
-      CryptoTracker
+  <!-- NAVBAR -->
+  <nav class=" shadow p-4 flex items-center justify-between">
+    <!-- left: hamburger (mobile) + brand -->
+    <div class="flex items-center space-x-3">
+      <button
+        class="md:hidden p-2 text-2xl"
+        on:click={toggleMenu}
+        aria-label="Menu"
+      >
+        {#if menuOpen}✕{:else}☰{/if}
+      </button>
+      <a
+        href="/"
+        class="text-3xl font-bold text-blue-600 dark:text-blue-400"
+        >CryptoTracker</a
+      >
     </div>
 
-    <div class="flex items-center space-x-6">
-      <a href="/dashboard"     class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105">Dashboard</a>
-      <a href="/portfolio"     class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105">Portfolio</a>
-      <a href="/transactions"  class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105">Transactions</a>
+    <!-- center: desktop links -->
+    <div class="hidden md:flex items-center space-x-6">
+      <a
+        href="/dashboard"
+        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
+        >Dashboard</a
+      >
+      <a
+        href="/portfolio"
+        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
+        >Portfolio</a
+      >
+      <a
+        href="/transactions"
+        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
+        >Transactions</a
+      >
       {#if data.isAdmin}
-        <a href="/admin" class="text-lg font-semibold text-red-500 dark:text-red-400 hover:scale-105 hover:underline">
-          Admin
-        </a>
+        <a
+          href="/admin"
+          class="text-lg font-medium text-red-500 dark:text-red-400 hover:underline"
+          >Admin</a
+        >
       {/if}
     </div>
 
+    <!-- right: theme toggle (always) + auth only on desktop -->
     <div class="flex items-center space-x-4">
-      <button on:click={toggleTheme} aria-label="Toggle theme"
-              class="p-2 rounded dark:hover:bg-gray-500 transition">
+      <!-- theme toggle always visible -->
+      <button
+        on:click={toggleTheme}
+        aria-label="Toggle theme"
+        class="p-2 rounded  transition"
+      >
         {#if theme === 'dark'}🌙{:else}☀️{/if}
       </button>
 
-      {#if data.userEmail}
-        <span class="font-semibold">
-          {data.userEmail}{#if data.isAdmin}<span class="text-red-500"> (Admin)</span>{/if}
-        </span>
-        <button on:click={handleSignOut} class="btn font-semibold hover:scale-105 btn-primary">
-          Sign Out
-        </button>
-      {:else}
-        <a href="/auth/login"  class="btn font-semibold hover:scale-105 btn-primary">Login</a>
-        <a href="/auth/signup" class="btn font-semibold hover:scale-105 btn-primary">Sign Up</a>
-      {/if}
+      <!-- auth links/buttons only on desktop -->
+      <div class="hidden md:flex items-center space-x-4">
+        {#if data.userEmail}
+          <span class="font-medium">
+            {data.userEmail}
+            {#if data.isAdmin}
+              <span class="text-red-500"> (Admin)</span>
+            {/if}
+          </span>
+          <button
+            on:click={handleSignOut}
+            class="btn btn-primary"
+          >
+            Sign Out
+          </button>
+        {:else}
+          <a
+            href="/auth/login"
+            class="btn btn-primary"
+            >Log In</a
+          >
+          <a
+            href="/auth/signup"
+            class="btn btn-primary"
+            >Sign Up</a
+          >
+        {/if}
+      </div>
     </div>
   </nav>
 
-  <main class="flex-1">
+  <!-- MOBILE MENU (tablet & phone) -->
+  {#if menuOpen}
+    <div class=" md:hidden p-4 space-y-4 shadow-md">
+      <a
+        href="/dashboard"
+        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
+        >Dashboard</a
+      >
+      <a
+        href="/portfolio"
+        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
+        >Portfolio</a
+      >
+      <a
+        href="/transactions"
+        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
+        >Transactions</a
+      >
+      {#if data.isAdmin}
+        <a
+          href="/admin"
+          class="block text-lg font-medium text-red-500 dark:text-red-400 hover:underline"
+          >Admin</a
+        >
+      {/if}
+
+      <hr class="border-gray-200 dark:border-gray-700" />
+
+      {#if data.userEmail}
+        <div class="text-sm ">
+          Signed in as <strong>{data.userEmail}</strong>
+        </div>
+        <button
+          on:click={handleSignOut}
+          class="w-full btn btn-danger"
+        >
+          Sign Out
+        </button>
+      {:else}
+        <a
+          href="/auth/login"
+          class="block w-full text-center btn btn-primary"
+          >Log In</a
+        >
+        <a
+          href="/auth/signup"
+          class="block w-full text-center btn btn-primary"
+          >Sign Up</a
+        >
+      {/if}
+    </div>
+  {/if}
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 p-4">
     <slot />
   </main>
 </div>

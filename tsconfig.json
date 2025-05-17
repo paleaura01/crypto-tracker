@@ -6,16 +6,10 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "preserveValueImports": false,
-    "baseUrl": ".",
-    "paths": {
-      "$lib/*": ["src/lib/*"],
-      "$lib/server/*": ["src/lib/server/*"]
-    }
+    "preserveValueImports": false
   },
   "include": [
     "src/**/*",
-    "src/node_modules/**/*",
     "env.d.ts",
     "global.d.ts",
     "src/app.d.ts"

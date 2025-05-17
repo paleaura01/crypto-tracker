@@ -17,7 +17,6 @@
     /* light‐mode defaults */
     @apply bg-gray-50 text-gray-800 shadow p-4 flex items-center justify-between;
   }
-  /* explicit dark‐mode override on nav */
   html.dark nav {
     @apply bg-gray-800 text-gray-200;
   }
@@ -26,6 +25,7 @@
   main {
     @apply container mx-auto px-4 py-6;
   }
+
   html main {
     @apply bg-white text-gray-900;
   }
@@ -37,7 +37,6 @@
   table {
     @apply w-full border-collapse shadow rounded-lg overflow-hidden;
   }
-  /* table bg/text per mode */
   html table {
     @apply bg-white text-gray-900;
   }
@@ -62,7 +61,6 @@
   html.dark tr:hover {
     @apply bg-gray-700;
   }
-  
 
   /* BUTTONS */
   .btn {
