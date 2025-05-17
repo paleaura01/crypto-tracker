@@ -54,3 +54,27 @@ git clone https://github.com/paleaura01/crypto-tracker.git
 cd crypto-tracker
 npm install
 # or yarn
+
+🔐 Authentication & Admin
+Sign Up charges SOL via Solflare, records payment, then creates a Supabase session.
+
+Log In sets an HTTP-only session cookie for SSR auth.
+
+Admin Flag is stored in your Supabase profiles table. Admins see extra links and can call /api/admin/* endpoints.
+
+💡 Contributing
+Fork the repo
+
+Create a feature branch (git checkout -b feat/foo)
+
+Commit your changes (git commit -m 'feat: add foo')
+
+Push & open a PR
+
+Please follow the existing code style (Prettier + ESLint).
+
+📄 License
+Distributed under the MIT License. See LICENSE for details.
+
+Made with ❤️ by Aaron Deas
+Track your crypto. Own your data.
