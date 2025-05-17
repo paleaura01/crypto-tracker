@@ -2,25 +2,17 @@
 <script lang="ts">
   import '../app.css';
   import { onMount } from 'svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { invalidateAll, goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
-  import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
-  // receive from +layout.server.ts
+  // values come from +layout.server.ts on each SSR/invalidated load
   export let data: {
     userEmail: string | null;
     isAdmin: boolean;
   };
 
+  // local theme state
   let theme: 'light' | 'dark' = 'light';
-  let authUnsub: { unsubscribe(): void };
-
-  async function handleSignOut() {
-    // proxy through our own endpoint
-    await fetch('/auth/logout', { method: 'POST' });
-    localStorage.removeItem('theme');
-    window.location.href = '/';
-  }
 
   function applyTheme(t: 'light' | 'dark') {
     document.documentElement.classList.toggle('dark', t === 'dark');
@@ -32,8 +24,15 @@
     applyTheme(theme === 'dark' ? 'light' : 'dark');
   }
 
+  async function handleSignOut() {
+    await fetch('/auth/logout', { method: 'POST' });
+    localStorage.removeItem('theme');
+    invalidateAll();
+    goto('/', { replaceState: true });
+  }
+
   onMount(() => {
-    // restore or init theme
+    // initialize theme
     const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (saved) applyTheme(saved);
     else
@@ -43,40 +42,35 @@
           : 'light'
       );
 
-    // whenever auth state changes on the client, re-run your server load()
+    // whenever auth state changes, re-run server load()
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, newSession: Session | null) => {
-        // trigger a full reload of all load() fns (including +layout.server.ts)
-        
-         invalidateAll();
-      }
-    );
-    authUnsub = subscription;
+    } = supabase.auth.onAuthStateChange(() => {
+      invalidateAll();
+    });
 
-    return () => authUnsub?.unsubscribe();
+    return () => subscription.unsubscribe();
   });
 </script>
 
 <div class="min-h-screen flex flex-col">
-  <nav class="z-10">
-    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+  <nav class="z-10 flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow">
+    <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
       CryptoTracker
     </div>
 
-    <div class="flex space-x-6">
-      <a href="/dashboard" class="hover:text-blue-600 dark:hover:text-blue-300">
+    <div class="flex items-center space-x-6">
+      <a href="/dashboard" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition">
         Dashboard
       </a>
-      <a href="/portfolio" class="hover:text-blue-600 dark:hover:text-blue-300">
+      <a href="/portfolio" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition">
         Portfolio
       </a>
-      <a href="/transactions" class="hover:text-blue-600 dark:hover:text-blue-300">
+      <a href="/transactions" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition">
         Transactions
       </a>
       {#if data.isAdmin}
-        <a href="/admin" class="text-red-500 dark:text-red-400 hover:underline">
+        <a href="/admin" class="text-lg font-semibold text-red-500 dark:text-red-400 hover:underline">
           Admin
         </a>
       {/if}
@@ -86,31 +80,31 @@
       <button
         on:click={toggleTheme}
         aria-label="Toggle theme"
-        class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+        class="p-2 rounded dark:hover:bg-gray-500 transition"
       >
-        {#if theme === 'dark'}☀️{:else}🌙{/if}
+        {#if theme === 'dark'}🌙{:else}☀️{/if}
       </button>
 
       {#if data.userEmail}
-        <span>
+        <span class="font-semibold">
           {data.userEmail}
           {#if data.isAdmin}<span class="text-red-500"> (Admin)</span>{/if}
         </span>
-        <button on:click={handleSignOut} class="btn btn-primary">
+        <button on:click={handleSignOut} class="btn font-semibold btn-primary">
           Sign Out
         </button>
       {:else}
-        <a href="/auth/login" class="text-blue-600 dark:text-blue-400 hover:underline">
+        <a href="/auth/login" class="btn font-semibold btn-primary">
           Login
         </a>
-        <a href="/auth/signup" class="text-blue-600 dark:text-blue-400 hover:underline">
+        <a href="/auth/signup" class="btn font-semibold btn-primary">
           Sign Up
         </a>
       {/if}
     </div>
   </nav>
 
-  <main>
+  <main class="flex-1">
     <slot />
   </main>
 </div>
