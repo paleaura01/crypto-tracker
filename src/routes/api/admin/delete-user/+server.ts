@@ -1,4 +1,4 @@
-// src\routes\api\admin\delete-user\+server.js
+// src\routes\api\admin\delete-user\+server.ts
 
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';

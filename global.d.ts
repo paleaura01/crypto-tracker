@@ -1,6 +1,8 @@
 /// <reference types="@sveltejs/kit" />
 import type { PublicKey } from '@solana/web3.js';
 
+
+
 declare global {
   interface Window {
     solflare?: {
