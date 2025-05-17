@@ -60,13 +60,13 @@
     </div>
 
     <div class="flex items-center space-x-6">
-      <a href="/dashboard" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition">
+      <a href="/dashboard" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105">
         Dashboard
       </a>
-      <a href="/portfolio" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition">
+      <a href="/portfolio" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105">
         Portfolio
       </a>
-      <a href="/transactions" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition">
+      <a href="/transactions" class="text-lg font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105">
         Transactions
       </a>
       {#if data.isAdmin}
