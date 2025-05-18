@@ -2,6 +2,9 @@
   "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {
     "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
@@ -10,8 +13,10 @@
   },
   "include": [
     "src/**/*",
+    "src/app.html",
     "env.d.ts",
     "global.d.ts",
     "src/app.d.ts"
-  ]
+  ],
+  "exclude": ["node_modules", ".svelte-kit"]
 }

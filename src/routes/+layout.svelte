@@ -31,6 +31,7 @@
   }
 
   onMount(() => {
+    // restore theme
     const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
     applyTheme(
       saved ??
@@ -38,15 +39,22 @@
           ? 'dark'
           : 'light')
     );
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange(() => invalidateAll());
-    return () => subscription.unsubscribe();
+
+    // cast to any so TS knows about onAuthStateChange
+    const authAny = supabase.auth as any;
+    const { subscription } = authAny.onAuthStateChange((event: any, session: any) => {
+      invalidateAll();
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   });
 </script>
 
-<div class="min-h-screen dark:bg-gray-900 flex flex-col">
+<div class="min-h-screen flex flex-col dark:bg-gray-900">
   <!-- NAVBAR -->
-  <nav class="shadow p-4 flex items-center justify-between bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-700">
+  <nav class="shadow p-4 flex items-center justify-between bg-gray-50 text-gray-800 dark:bg-gray-700 dark:text-gray-100">
     <div class="flex items-center space-x-3">
       <button class="md:hidden p-2 text-2xl" on:click={toggleMenu} aria-label="Menu">
         {#if menuOpen}✕{:else}☰{/if}
@@ -129,8 +137,7 @@
     </div>
   {/if}
 
-  <!-- swap this from <main> to <div> -->
-  <div class="flex-1 p-4">
+  <div class="flex-1 p-4 bg-white dark:bg-gray-900">
     <slot />
   </div>
 </div>

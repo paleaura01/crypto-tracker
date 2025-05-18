@@ -1,11 +1,13 @@
-// svelte.config.js
 import adapter from '@sveltejs/adapter-vercel';
 import { sveltePreprocess } from 'svelte-preprocess';
 import { resolve } from 'path';
+import type { Config } from '@sveltejs/kit';
 
-/** @type {import('@sveltejs/kit').Config} */
-const config = {
-  preprocess: sveltePreprocess({ typescript: true }),
+const config: Config = {
+  preprocess: sveltePreprocess({
+    typescript: true,
+    postcss: true
+  }),
   kit: {
     adapter: adapter({ runtime: 'edge' }),
     alias: {
