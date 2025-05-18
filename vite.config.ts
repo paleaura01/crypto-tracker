@@ -1,12 +1,17 @@
 import { defineConfig } from 'vite';
 import type { UserConfig } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 import rollupNodePolyFill from 'rollup-plugin-polyfill-node';
 
 const config: UserConfig = {
-  plugins: [sveltekit()],
+  plugins: [
+    sveltekit(),
+    tailwindcss()
+  ],
   resolve: {
     alias: {
       util: 'rollup-plugin-polyfill-node/polyfills/util',

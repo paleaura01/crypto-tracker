@@ -1,81 +1,22 @@
 @import "tailwindcss";
 
-/* 1) Base layer: page background & text */
-@layer base {
-  html {
-    @apply bg-white text-gray-900;
-  }
-  html.dark {
-    @apply bg-gray-900 text-gray-100;
-  }
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+/* BUTTONS */
+.btn {
+  @apply px-3 py-1 rounded transition disabled:opacity-50 disabled:cursor-not-allowed;
 }
-
-/* 2) Component layer: nav, main, tables, buttons */
-@layer components {
-  /* NAVBAR */
-  nav {
-    /* light‐mode defaults */
-    @apply bg-gray-50 text-gray-800 shadow p-4 flex items-center justify-between;
-  }
-  html.dark nav {
-    @apply bg-gray-800 text-gray-200;
-  }
-
-  /* MAIN WRAPPER */
-  main {
-    @apply container mx-auto px-4 py-6;
-  }
-
-  html main {
-    @apply bg-white text-gray-900;
-  }
-  html.dark main {
-    @apply bg-gray-900 text-gray-100;
-  }
-
-  /* TABLE */
-  table {
-    @apply w-full border-collapse shadow rounded-lg overflow-hidden;
-  }
-  html table {
-    @apply bg-white text-gray-900;
-  }
-  html.dark table {
-    @apply bg-gray-800 text-gray-100;
-  }
-  thead tr {
-    @apply bg-gray-100;
-  }
-  html.dark thead tr {
-    @apply bg-gray-700;
-  }
-  th, td {
-    @apply px-4 py-2 border-b border-gray-200 text-left;
-  }
-  html.dark th, html.dark td {
-    @apply border-gray-700;
-  }
-  tr:hover {
-    @apply bg-gray-50;
-  }
-  html.dark tr:hover {
-    @apply bg-gray-700;
-  }
-
-  /* BUTTONS */
-  .btn {
-    @apply px-3 py-1 rounded transition disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-  .btn-primary {
-    @apply bg-blue-500 hover:bg-blue-600 text-white;
-  }
-  .btn-danger {
-    @apply bg-red-500 hover:bg-red-600 text-white;
-  }
-  .btn-toggle-active {
-    @apply bg-yellow-300 hover:opacity-90 text-black;
-  }
-  .btn-toggle-inactive {
-    @apply bg-green-300 hover:opacity-90 text-black;
-  }
+.btn-primary {
+  @apply bg-blue-500 hover:bg-blue-600 text-white;
+}
+.btn-danger {
+  @apply bg-red-500 hover:bg-red-600 text-white;
+}
+.btn-toggle-active {
+  @apply bg-yellow-300 hover:opacity-90 text-black;
+}
+.btn-toggle-inactive {
+  @apply bg-green-300 hover:opacity-90 text-black;
 }

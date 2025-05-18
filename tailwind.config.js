@@ -1,6 +1,7 @@
+// tailwind.config.cjs
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  mode: 'jit',               // enable JIT for faster dev builds
+
   darkMode: 'class',         // toggle dark mode with .dark on <html>
   content: [
     './src/**/*.{html,js,svelte,ts}',

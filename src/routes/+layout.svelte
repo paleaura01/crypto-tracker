@@ -1,4 +1,3 @@
-<!-- src/routes/+layout.svelte -->
 <script lang="ts">
   import '../app.css';
   import { onMount } from 'svelte';
@@ -39,156 +38,99 @@
           ? 'dark'
           : 'light')
     );
-
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(() => invalidateAll());
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange(() => invalidateAll());
     return () => subscription.unsubscribe();
   });
 </script>
 
-<div class="min-h-screen flex flex-col">
+<div class="min-h-screen dark:bg-gray-900 flex flex-col">
   <!-- NAVBAR -->
-  <nav class=" shadow p-4 flex items-center justify-between">
-    <!-- left: hamburger (mobile) + brand -->
+  <nav class="shadow p-4 flex items-center justify-between bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-700">
     <div class="flex items-center space-x-3">
-      <button
-        class="md:hidden p-2 text-2xl"
-        on:click={toggleMenu}
-        aria-label="Menu"
-      >
+      <button class="md:hidden p-2 text-2xl" on:click={toggleMenu} aria-label="Menu">
         {#if menuOpen}✕{:else}☰{/if}
       </button>
-      <a
-        href="/"
-        class="text-3xl font-bold text-blue-600 dark:text-blue-400"
-        >CryptoTracker</a
-      >
+      <a href="/" class="text-3xl font-bold text-blue-600 dark:text-blue-400">
+        CryptoTracker
+      </a>
     </div>
 
-    <!-- center: desktop links -->
     <div class="hidden md:flex items-center space-x-6">
       <a
         href="/dashboard"
-        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
-        >Dashboard</a
-      >
+        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105"
+      >Dashboard</a>
       <a
         href="/portfolio"
-        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
-        >Portfolio</a
-      >
+        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105"
+      >Portfolio</a>
       <a
         href="/transactions"
-        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
-        >Transactions</a
-      >
+        class="text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105"
+      >Transactions</a>
       {#if data.isAdmin}
         <a
           href="/admin"
-          class="text-lg font-medium text-red-500 dark:text-red-400 hover:underline"
-          >Admin</a
-        >
+          class="text-lg font-medium text-red-500 dark:text-red-400 hover:underline transition transform hover:scale-105"
+        >Admin</a>
       {/if}
     </div>
 
-    <!-- right: theme toggle (always) + auth only on desktop -->
     <div class="flex items-center space-x-4">
-      <!-- theme toggle always visible -->
-      <button
-        on:click={toggleTheme}
-        aria-label="Toggle theme"
-        class="p-2 rounded  transition"
-      >
+      <button on:click={toggleTheme} aria-label="Toggle theme" class="p-2 rounded transition">
         {#if theme === 'dark'}🌙{:else}☀️{/if}
       </button>
 
-      <!-- auth links/buttons only on desktop -->
       <div class="hidden md:flex items-center space-x-4">
         {#if data.userEmail}
           <span class="font-medium">
-            {data.userEmail}
-            {#if data.isAdmin}
-              <span class="text-red-500"> (Admin)</span>
-            {/if}
+            {data.userEmail}{#if data.isAdmin} <span class="text-red-500">(Admin)</span>{/if}
           </span>
-          <button
-            on:click={handleSignOut}
-            class="btn btn-primary"
-          >
-            Sign Out
-          </button>
+          <button on:click={handleSignOut} class="btn btn-primary">Sign Out</button>
         {:else}
-          <a
-            href="/auth/login"
-            class="btn btn-primary"
-            >Log In</a
-          >
-          <a
-            href="/auth/signup"
-            class="btn btn-primary"
-            >Sign Up</a
-          >
+          <a href="/auth/login" class="btn btn-primary">Log In</a>
+          <a href="/auth/signup" class="btn btn-primary">Sign Up</a>
         {/if}
       </div>
     </div>
   </nav>
 
-  <!-- MOBILE MENU (tablet & phone) -->
   {#if menuOpen}
-    <div class=" md:hidden p-4 space-y-4 shadow-md">
+    <div class="md:hidden p-4 space-y-4 shadow-md">
       <a
         href="/dashboard"
-        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
-        >Dashboard</a
-      >
+        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105"
+      >Dashboard</a>
       <a
         href="/portfolio"
-        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
-        >Portfolio</a
-      >
+        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105"
+      >Portfolio</a>
       <a
         href="/transactions"
-        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300"
-        >Transactions</a
-      >
+        class="block text-lg font-medium hover:text-blue-600 dark:hover:text-blue-300 transition transform hover:scale-105"
+      >Transactions</a>
       {#if data.isAdmin}
         <a
           href="/admin"
-          class="block text-lg font-medium text-red-500 dark:text-red-400 hover:underline"
-          >Admin</a
-        >
+          class="block text-lg font-medium text-red-500 dark:text-red-400 hover:underline transition transform hover:scale-105"
+        >Admin</a>
       {/if}
 
       <hr class="border-gray-200 dark:border-gray-700" />
 
       {#if data.userEmail}
-        <div class="text-sm ">
-          Signed in as <strong>{data.userEmail}</strong>
-        </div>
-        <button
-          on:click={handleSignOut}
-          class="w-full btn btn-danger"
-        >
-          Sign Out
-        </button>
+        <div class="text-sm">Signed in as <strong>{data.userEmail}</strong></div>
+        <button on:click={handleSignOut} class="w-full btn btn-danger">Sign Out</button>
       {:else}
-        <a
-          href="/auth/login"
-          class="block w-full text-center btn btn-primary"
-          >Log In</a
-        >
-        <a
-          href="/auth/signup"
-          class="block w-full text-center btn btn-primary"
-          >Sign Up</a
-        >
+        <a href="/auth/login" class="block w-full text-center btn btn-primary">Log In</a>
+        <a href="/auth/signup" class="block w-full text-center btn btn-primary">Sign Up</a>
       {/if}
     </div>
   {/if}
 
-  <!-- MAIN CONTENT -->
-  <main class="flex-1 p-4">
+  <!-- swap this from <main> to <div> -->
+  <div class="flex-1 p-4">
     <slot />
-  </main>
+  </div>
 </div>

@@ -148,8 +148,8 @@ goto('/dashboard', { replaceState: true, invalidateAll: true });
 </script>
 
 <main>
-  <div class="max-w-md mx-auto mt-12 p-6 rounded-lg shadow-lg">
-    <h1 class="text-2xl font-semibold mb-4">Sign Up</h1>
+  <div class="max-w-md mx-auto mt-12 bg-gray-50 text-gray-800 dark:bg-gray-700 p-6 rounded-lg shadow-lg">
+    <h1 class="text-2xl font-semibold mb-4 dark:text-white">Sign Up</h1>
 
     <!-- WRAP INPUTS & BUTTON IN A FORM -->
     <form on:submit|preventDefault={handleSignUp} class="space-y-4 mb-6">
@@ -158,7 +158,7 @@ goto('/dashboard', { replaceState: true, invalidateAll: true });
         bind:value={email}
         placeholder="Email"
         autocomplete="email"
-        class="w-full px-4 py-2 border rounded border-gray-500"
+        class="w-full px-4 py-2 border rounded border-gray-500 dark:text-white"
         required
       />
       <input
@@ -166,13 +166,13 @@ goto('/dashboard', { replaceState: true, invalidateAll: true });
         bind:value={password}
         placeholder="Password"
         autocomplete="new-password"
-        class="w-full px-4 py-2 border rounded border-gray-500"
+        class="w-full px-4 py-2 border rounded border-gray-500 dark:text-white"
         required
       />
 
       <fieldset class="p-4 rounded mb-6">
-        <legend class="font-medium mb-2">Choose your plan</legend>
-        <label class="flex items-center mb-2 space-x-3 cursor-pointer">
+        <legend class="font-medium mb-2 dark:text-white">Choose your plan</legend>
+        <label class="flex items-center mb-2 space-x-3 dark:text-white cursor-pointer">
           <input
             type="radio"
             name="plan"
@@ -185,7 +185,7 @@ goto('/dashboard', { replaceState: true, invalidateAll: true });
             {#if mounted && solanaAmount > 0} (≈ {solanaAmount.toFixed(4)} SOL){/if}
           </span>
         </label>
-        <label class="flex items-center space-x-3 cursor-pointer">
+        <label class="flex items-center space-x-3 dark:text-white cursor-pointer">
           <input
             type="radio"
             name="plan"
@@ -232,7 +232,7 @@ goto('/dashboard', { replaceState: true, invalidateAll: true });
       <!-- now this button submits the form -->
       <button
         type="submit"
-        class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-semibold rounded disabled:opacity-50 transition"
+        class="w-full px-4 py-2 dark:text-white bg-green-500 hover:bg-green-600 text-black font-semibold rounded disabled:opacity-50 transition"
         disabled={loading || !get(walletStore).connected}
       >
         {loading ? 'Processing…' : 'Subscribe & Sign Up'}

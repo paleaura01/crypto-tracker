@@ -62,10 +62,10 @@
   <h1 class="text-3xl font-semibold mb-6">Admin Dashboard</h1>
 
   <div class="overflow-x-auto">
-    <table>
-      <thead>
-        <tr>
-          <th>Email</th>
+    <table class="w-full  border-collapse shadow rounded-lg overflow-hidden">
+      <thead class="px-4 py-2 border-b border-gray-200 text-left">
+        <tr class="">
+          <th >Email</th>
           <th>Plan</th>
           <th>Status</th>
           <th>Amount</th>
@@ -76,8 +76,8 @@
       </thead>
       <tbody>
         {#each data.users as u}
-          <tr>
-            <td>{u.email}</td>
+          <tr class="">
+            <td class="py-2 ">{u.email}</td>
             <td>{u.plan}</td>
             <td>
               <span
@@ -96,10 +96,10 @@
                 ? new Date(u.last_sign_in_at).toLocaleDateString()
                 : 'Never'}
             </td>
-            <td class="flex space-x-2">
+            <td class="flex  space-x-2">
               <button
                 on:click={() => toggleUserStatus(u.user_id, u.status, u.email)}
-                class="btn {u.status === 'active' ? 'btn-toggle-active' : 'btn-toggle-inactive'}"
+                class="btn {u.status === 'active' ? 'btn-toggle-active' : 'btn-toggle-inactive'} "
                 disabled={u.email === data.adminEmail}
               >
                 {u.status === 'active' ? 'Deactivate' : 'Activate'}
@@ -119,7 +119,7 @@
   </div>
 
   {#if data.users.length === 0}
-    <p class="mt-6 text-center text-gray-600 dark:text-gray-400">
+    <p class="mt-6  text-center text-gray-600 dark:text-gray-400">
       No users found.
     </p>
   {/if}
