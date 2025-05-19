@@ -3,7 +3,6 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import crypto from 'crypto';
 import nacl from 'tweetnacl';
-import fetch from 'node-fetch';
 import { importJWK, SignJWT, type JWK } from 'jose';
 import type {
   ExchangeV2Account,
