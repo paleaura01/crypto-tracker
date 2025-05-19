@@ -1,4 +1,6 @@
 import { json, error } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
+
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -13,7 +15,7 @@ interface WalletToken {
   balance: number;
 }
 
-export async function GET({ url, fetch }) {
+export async function GET({ url, fetch }: RequestEvent) {
   // 1) Load & index CoinGecko coin list from src/data/coins-list.json
   const coinsPath = path.resolve('src/data/coins-list.json');
   let coins: CoinInfo[];

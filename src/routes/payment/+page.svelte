@@ -1,7 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { walletStore, connectSolflare } from '$lib/stores/wallet';
-    import { supabase } from '$lib/supabase';
+    import { supabase } from '$lib/supabaseClient';
     import { goto } from '$app/navigation';
     import { env } from '$env/dynamic/public';
     import { Connection, PublicKey, LAMPORTS_PER_SOL, Transaction, SystemProgram } from '@solana/web3.js';
