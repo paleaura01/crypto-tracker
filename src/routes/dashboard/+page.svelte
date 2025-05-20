@@ -24,11 +24,11 @@
   });
 </script>
 
-<template>
-  <h1>Welcome, {data.userEmail}!</h1>
+<template >
+  <h1 class="dark:text-white">Welcome, {data.userEmail}!</h1>
   {#if data.isAdmin}
-    <p>You have admin access.</p>
+    <p class="dark:text-white">You have admin access.</p>
   {:else}
-    <p>You are a regular user.</p>
+    <p class="dark:text-white">You are a regular user.</p>
   {/if}
 </template>

@@ -58,7 +58,7 @@
   }
 </script>
 
-<main class="container mx-auto px-4 py-8">
+<main class="container mx-auto px-4 py-8 dark:text-white">
   <h1 class="text-3xl font-semibold mb-6">Admin Dashboard</h1>
 
   <div class="overflow-x-auto">
@@ -96,10 +96,10 @@
                 ? new Date(u.last_sign_in_at).toLocaleDateString()
                 : 'Never'}
             </td>
-            <td class="flex  space-x-2">
+            <td class="flex pt-2  space-x-2">
               <button
                 on:click={() => toggleUserStatus(u.user_id, u.status, u.email)}
-                class="btn {u.status === 'active' ? 'btn-toggle-active' : 'btn-toggle-inactive'} "
+                class="btn  {u.status === 'active' ? 'btn-toggle-active' : 'btn-toggle-inactive'} "
                 disabled={u.email === data.adminEmail}
               >
                 {u.status === 'active' ? 'Deactivate' : 'Activate'}

@@ -4,7 +4,7 @@
   export let loans: LoanData[] = [];
 </script>
 
-<div class="mb-6">
+<div class="mb-6 dark:text-white">
   <h2 class="text-xl font-semibold mb-2">Coinbase Loans</h2>
   {#if loans.length}
     <ul class="list-disc pl-5">

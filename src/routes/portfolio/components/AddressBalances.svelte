@@ -13,7 +13,7 @@
     $: shown = accounts.filter(a => a.price > 0);
   </script>
   
-  <div class="section">
+  <div class="section dark:text-white">
     <h2>On-Chain Balances</h2>
   
     {#if shown.length}

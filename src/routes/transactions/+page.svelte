@@ -66,7 +66,7 @@
     input, button { margin-right: .5rem; }
   </style>
   
-  <div class="section">
+  <div class="section dark:text-white">
     <h2>Coinbase Balances</h2>
     <div>
       <input placeholder="Key ID"      bind:value={keyId}      style="width:200px"/>
@@ -89,7 +89,7 @@
     {/if}
   </div>
   
-  <div class="section">
+  <div class="section dark:text-white">
     <h2>On-Chain Balances</h2>
     <input bind:value={address} placeholder="0x… address" style="width:300px"/>
     <button on:click={loadOnchain} disabled={loadingChain}>

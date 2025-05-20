@@ -93,7 +93,7 @@
       <div class="hidden md:flex items-center space-x-4">
         {#if data.userEmail}
           <span class="font-medium">
-            {data.userEmail}{#if data.isAdmin} <span class="text-red-500">(Admin)</span>{/if}
+            {data.userEmail}{#if data.isAdmin} <span class="text-red-500 pl-2">(Admin)</span>{/if}
           </span>
           <button on:click={handleSignOut} class="btn btn-primary">Sign Out</button>
         {:else}

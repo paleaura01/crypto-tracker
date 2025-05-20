@@ -4,7 +4,7 @@
   export let wallets: WalletAccount[] = [];
 </script>
 
-<div class="mb-6">
+<div class="mb-6 dark:text-white">
   <h2 class="text-xl font-semibold mb-2">Coinbase Wallet</h2>
   {#if wallets.length}
     <ul class="list-disc pl-5">

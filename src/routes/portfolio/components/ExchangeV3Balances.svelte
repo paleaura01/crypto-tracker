@@ -4,8 +4,8 @@
   export let accounts: ExchangeV3Account[] = [];
 </script>
 
-<div class="mb-6">
-  <h2 class="text-xl font-semibold mb-2">Exchange V3 Balances</h2>
+<div class="dark:text-white mb-6">
+  <h2 class="text-xl font-semibold mb-2">Coinbase Exchange Balances</h2>
   {#if accounts.length}
     <ul class="list-disc pl-5">
       {#each accounts
@@ -18,6 +18,6 @@
       {/each}
     </ul>
   {:else}
-    <p>No V3 balances found.</p>
+    <p>No balances found.</p>
   {/if}
 </div>
