@@ -1,23 +1,16 @@
+<!-- src/routes/portfolio/components/CBWalletBalances.svelte -->
 <script lang="ts">
   import type { WalletAccount } from '$lib/server/types';
-
   export let wallets: WalletAccount[] = [];
 </script>
 
 <div class="mb-6 dark:text-white">
-  <h2 class="text-xl font-semibold mb-2">Coinbase Wallet</h2>
-  {#if wallets.length}
-    <ul class="list-disc pl-5">
-      {#each wallets
-        .filter(w => Number(w.balance.amount ?? 0) > 0)
-        as acct, idx (`wallet-${acct.id ?? idx}`)}
-        <li>
-          {acct.balance.currency}:
-          {acct.balance.amount}
-        </li>
-      {/each}
-    </ul>
+  <h2 class="text-xl font-semibold mb-2">Coinbase Custodial Wallet</h2>
+
+  {#if wallets.length > 0}
+    <!-- You’ll replace this later with real UI -->
+    <p>No Custodial Wallet Loaded.</p>
   {:else}
-    <p>No wallet balances.</p>
+    <p>No Custodial Wallet Loaded.</p>
   {/if}
 </div>
