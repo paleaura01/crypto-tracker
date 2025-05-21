@@ -1,14 +1,16 @@
-<!-- src/routes/portfolio/components/ExchangeConnect.svelte -->
+<!-- src/routes/portfolio/components/CoinbaseExchange.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { supabase } from '$lib/supabaseClient';
   import { invalidateAll } from '$app/navigation';
+  import type { ExchangeV2Account, ExchangeV3Account } from '$lib/server/types';
 
-  // Reference to the <input> so we can reset its value
-  let fileInput: HTMLInputElement;
+  export let exchangeV2: ExchangeV2Account[] = [];
+  export let exchangeV3: ExchangeV3Account[] = [];
 
   let statusMessage = "No Coinbase key loaded.";
+  let fileInput: HTMLInputElement;
 
   function applyKeyData(keyData: any) {
     if (browser) {
@@ -21,14 +23,14 @@
   onMount(async () => {
     if (!browser) return;
 
-    // 1) Check localStorage
+    // 1) Try local storage
     const saved = localStorage.getItem('coinbaseKey');
     if (saved) {
       statusMessage = "🔑 Loaded Coinbase key from local storage.";
       return;
     }
 
-    // 2) Fetch from DB
+    // 2) Try DB
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       statusMessage = "Please log in to load your key.";
@@ -80,7 +82,6 @@
         alert("Failed to save key to database.");
       } else {
         console.log("✅ Key upserted in DB for user", user.id);
-        // Re-run page load so balances appear immediately
         await invalidateAll();
       }
     } catch (err) {
@@ -93,7 +94,6 @@
     if (browser) localStorage.removeItem('coinbaseKey');
     statusMessage = "🗑️ Local key cache cleared.";
     console.log("🗑️ Cleared Coinbase key from local storage");
-    // Reset the file-input so re-selecting the same file fires change again
     if (fileInput) fileInput.value = "";
   }
 
@@ -114,9 +114,8 @@
       alert("Failed to clear key from database.");
     } else {
       console.log("🗑️ Cleared Coinbase key from DB for user", user.id);
-      clearLocalKey();  // also clears the input
+      clearLocalKey();
       statusMessage = "🗑️ Database key cleared. Please upload again.";
-      // Re-run page load so upload prompt appears immediately
       await invalidateAll();
     }
   }
@@ -131,6 +130,7 @@
     type="file"
     accept="application/json"
     on:change|preventDefault={handleFileUpload}
+    class="block mb-2"
   />
 
   <div class="flex space-x-2">
@@ -148,4 +148,37 @@
       Clear DB Key
     </button>
   </div>
+</div>
+
+<section class="dark:text-white mb-6">
+  <h2 class="text-xl font-semibold">Coinbase Advanced Exchange Balances</h2>
+  {#if exchangeV2.length}
+    <ul class="list-disc pl-5">
+      {#each exchangeV2 as acct}
+        {#if +acct.balance.amount > 0}
+          <li>{acct.currency.code}: {acct.balance.amount}</li>
+        {/if}
+      {/each}
+    </ul>
+  {:else}
+    <p>No balances found.</p>
+  {/if}
+</section>
+
+<div class="dark:text-white mb-6">
+  <h2 class="text-xl font-semibold mb-2">Coinbase Exchange Balances</h2>
+  {#if exchangeV3.length}
+    <ul class="list-disc pl-5">
+      {#each exchangeV3
+        .filter(a => Number(a.available_balance?.value ?? 0) > 0)
+        as acct, idx (`v3-${acct.id ?? idx}`)}
+        <li>
+          {acct.currency}:
+          {acct.available_balance?.value ?? acct.balance?.value ?? 0}
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <p>No balances found.</p>
+  {/if}
 </div>
