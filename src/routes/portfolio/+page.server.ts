@@ -1,29 +1,68 @@
-// src/routes/portfolio/+page.server.ts
 import type { PageServerLoad } from './$types';
-import { error } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 
-import { fetchExchangeV2 } from '$lib/cbexchangev2';
-import { fetchExchangeV3 } from '$lib/cbexchangev3';
-import { fetchWalletBalances } from '$lib/cbwallet';
-import { fetchLoanData } from '$lib/cbloans';
+import {
+  getCoinbaseKey,
+  fetchExchangeV2,
+  fetchExchangeV3,
+  fetchWalletBalances,
+  fetchLoanData
+} from '$lib/server/cb-client';
 
-export const load: PageServerLoad = async () => {
-  const [v2R, v3R, walletR, loanR] = await Promise.allSettled([
-    fetchExchangeV2(),
-    fetchExchangeV3(),
-    fetchWalletBalances(),
-    fetchLoanData()
+import type {
+  ExchangeV2Account,
+  ExchangeV3Account,
+  WalletAccount,
+  LoanData
+} from '$lib/server/types';
+
+export const load: PageServerLoad = async ({ locals }) => {
+  const session = locals.session;
+  if (!session?.user) {
+    throw redirect(303, '/auth/login');
+  }
+  const userId = session.user.id;
+
+  // Check if the user has uploaded a key yet
+  let hasCoinbaseKey = true;
+  try {
+    await getCoinbaseKey(userId);
+  } catch {
+    hasCoinbaseKey = false;
+  }
+
+  // If no key, return early without error
+  if (!hasCoinbaseKey) {
+    return {
+      hasCoinbaseKey: false,
+      exchangeV2: [] as ExchangeV2Account[],
+      exchangeV3: [] as ExchangeV3Account[],
+      wallet: [] as WalletAccount[],
+      loans: [] as LoanData[]
+    };
+  }
+
+  // Otherwise load V2/V3 (bubble errors) and swallow wallet/loans errors
+  const [v2, v3] = await Promise.all([
+    fetchExchangeV2(userId),
+    fetchExchangeV3(userId)
   ]);
 
-  if (v2R.status === 'rejected')
-    throw error(500, `Exchange V2 error: ${v2R.reason}`);
-  if (v3R.status === 'rejected')
-    throw error(500, `Exchange V3 error: ${v3R.reason}`);
+  let wallet: WalletAccount[] = [];
+  try {
+    wallet = await fetchWalletBalances(userId);
+  } catch { /* ignore */ }
+
+  let loans: LoanData[] = [];
+  try {
+    loans = await fetchLoanData(userId);
+  } catch { /* ignore */ }
 
   return {
-    exchangeV2: v2R.value,
-    exchangeV3: v3R.value,
-    walletAccounts: walletR.status === 'fulfilled' ? walletR.value : [],
-    loan: loanR.status === 'fulfilled' ? loanR.value : null
+    hasCoinbaseKey: true,
+    exchangeV2: v2,
+    exchangeV3: v3,
+    wallet,
+    loans
   };
 };
