@@ -1,29 +1,36 @@
 <!-- src/routes/portfolio/+page.svelte -->
 <script lang="ts">
-  import CoinbaseExchange from './components/CoinbaseExchange.svelte';
-  import CBWalletBalances from './components/CBWalletBalances.svelte';
-  import CBLoanSummary from './components/CBLoanSummary.svelte';
+  import CoinbaseExchange  from './components/CoinbaseExchange.svelte';
+  import CBWalletBalances  from './components/CBWalletBalances.svelte';
+  import CBLoanSummary     from './components/CBLoanSummary.svelte';
 
   import type {
+    ExchangeV3Account,
     WalletAccount,
-    ExchangeV3Account
+    LoanData
   } from '$lib/server/types';
 
+  // Only the props your loader returns and your components expect
   export let data: {
-    wallet: WalletAccount[];
     exchangeV3: ExchangeV3Account[];
+    wallet: WalletAccount[];
+    loans: LoanData[];
   };
 
-  const { wallet, exchangeV3 } = data;
+  const { exchangeV3, wallet, loans } = data;
 </script>
 
 <section class="p-4 space-y-8">
   <CoinbaseExchange
-    wallets={wallet}
     exchangeV3={exchangeV3}
+    wallets={wallet}
   />
 
-  <CBWalletBalances wallets={wallet} />
+  <CBWalletBalances
+    wallets={wallet}
+  />
 
-  <CBLoanSummary />
+  <CBLoanSummary
+    loans={loans}
+  />
 </section>

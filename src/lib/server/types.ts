@@ -24,8 +24,7 @@ export interface WalletAccount {
 }
 
 export interface LoanData {
-  id: string;
-  collateral: string;
-  loanAmount: string;
-  [k: string]: any;
+  id: string;            // UUID of the loan record
+  collateral: number;    // BTC collateral amount
+  loanAmount: number;    // USDC borrowed amount
 }

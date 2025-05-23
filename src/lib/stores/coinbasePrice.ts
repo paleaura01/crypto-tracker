@@ -1,4 +1,4 @@
-// src/lib/stores/price.ts
+// src/lib/stores/coinbasePrice.ts
 import { writable } from 'svelte/store';
 
 export const btcPrice = writable<number|null>(null);

@@ -1,6 +1,5 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-
 import {
   getCoinbaseKey,
   fetchExchangeV2,
@@ -8,7 +7,6 @@ import {
   fetchWalletBalances,
   fetchLoanData
 } from '$lib/server/coinbaseServer';
-
 import type {
   ExchangeV2Account,
   ExchangeV3Account,
@@ -18,51 +16,41 @@ import type {
 
 export const load: PageServerLoad = async ({ locals }) => {
   const session = locals.session;
-  if (!session?.user) {
-    throw redirect(303, '/auth/login');
-  }
+  if (!session?.user) throw redirect(303, '/auth/login');
   const userId = session.user.id;
 
-  // Check if the user has uploaded a key yet
-  let hasCoinbaseKey = true;
-  try {
-    await getCoinbaseKey(userId);
-  } catch {
-    hasCoinbaseKey = false;
-  }
+  // ensure coinbase key
+  let hasKey = true;
+  try { await getCoinbaseKey(userId); }
+  catch { hasKey = false; }
 
-  // If no key, return early without error
-  if (!hasCoinbaseKey) {
+  if (!hasKey) {
     return {
       hasCoinbaseKey: false,
       exchangeV2: [] as ExchangeV2Account[],
       exchangeV3: [] as ExchangeV3Account[],
       wallet: [] as WalletAccount[],
-      loans: [] as LoanData[]
+      loans: [] as LoanData[],
+      userId            // ← include here
     };
   }
 
-  // Otherwise load V2/V3 (bubble errors) and swallow wallet/loans errors
-  const [v2, v3] = await Promise.all([
+  const [exchangeV2, exchangeV3] = await Promise.all([
     fetchExchangeV2(userId),
     fetchExchangeV3(userId)
   ]);
 
   let wallet: WalletAccount[] = [];
-  try {
-    wallet = await fetchWalletBalances(userId);
-  } catch { /* ignore */ }
-
+  try { wallet = await fetchWalletBalances(userId); } catch {}
   let loans: LoanData[] = [];
-  try {
-    loans = await fetchLoanData(userId);
-  } catch { /* ignore */ }
+  try { loans = await fetchLoanData(userId); } catch {}
 
   return {
     hasCoinbaseKey: true,
-    exchangeV2: v2,
-    exchangeV3: v3,
+    exchangeV2,
+    exchangeV3,
     wallet,
-    loans
+    loans,
+    userId           // ← and here
   };
 };
