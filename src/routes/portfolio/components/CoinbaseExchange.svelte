@@ -105,7 +105,7 @@
   }
 </script>
 
-<div class="p-4  space-y-3">
+<div class="  space-y-2">
   <h3 class="text-lg font-medium">Connect Coinbase API Key</h3>
   <p>{statusMessage}</p>
 

@@ -21,6 +21,9 @@
 </script>
 
 <section class="p-4 space-y-8">
+    <CBLoanSummary
+    loans={loans}
+  />
   <CoinbaseExchange
     exchangeV3={exchangeV3}
     wallets={wallet}
@@ -30,7 +33,5 @@
     wallets={wallet}
   />
 
-  <CBLoanSummary
-    loans={loans}
-  />
+
 </section>
