@@ -7,7 +7,7 @@ import {
   fetchExchangeV3,
   fetchWalletBalances,
   fetchLoanData
-} from '$lib/server/cb-client';
+} from '$lib/server/cbclient';
 
 import type {
   ExchangeV2Account,

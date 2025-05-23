@@ -1,14 +1,14 @@
 <!-- src/routes/portfolio/components/CBLoanSummary.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { btcPrice, startBtcTicker } from '$lib/stores/price';
+  import { btcPrice, startBtcTicker } from '$lib/stores/cbprice';
   import { writable, derived } from 'svelte/store';
 
-  // user inputs
+  // 1) User inputs
   const collateralBTC = writable<number>(0);
   const borrowedUSDC  = writable<number>(0);
 
-  // computed LTV
+  // 2) Compute LTV once we have price + inputs
   const ltv = derived(
     [collateralBTC, borrowedUSDC, btcPrice],
     ([$coll, $borrow, $price]) =>
@@ -18,6 +18,7 @@
   );
 
   onMount(() => {
+    // kick off the WS ticker
     startBtcTicker();
   });
 </script>
@@ -26,9 +27,11 @@
   <h2 class="text-xl font-semibold">Manual Loan LTV Calculator</h2>
 
   <div class="grid grid-cols-2 gap-4">
-    <label class="flex flex-col">
+    <label for="collateral" class="flex flex-col">
       <span>Collateral (BTC)</span>
       <input
+        id="collateral"
+        name="collateral"
         type="number"
         min="0"
         step="any"
@@ -37,9 +40,11 @@
       />
     </label>
 
-    <label class="flex flex-col">
+    <label for="borrowed" class="flex flex-col">
       <span>Borrowed (USDC)</span>
       <input
+        id="borrowed"
+        name="borrowed"
         type="number"
         min="0"
         step="any"

@@ -179,10 +179,3 @@ export async function getCoinbaseKey(userId: string): Promise<any> {
   return loadRawKey(userId);
 }
 
-// inside your server-side cb-client.ts
-export async function fetchSpotPrice(base: string, quote: string): Promise<number> {
-  const res  = await fetch(`https://api.coinbase.com/v2/prices/${base}-${quote}/spot`);
-  if (!res.ok) throw new Error(`Spot price fetch failed: ${res.status}`);
-  const { data } = await res.json() as { data: { amount: string } };
-  return Number(data.amount);
-}

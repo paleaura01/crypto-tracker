@@ -1,3 +1,4 @@
+<!-- src/routes/portfolio/+page.svelte -->
 <script lang="ts">
   import CoinbaseExchange from './components/CoinbaseExchange.svelte';
   import CBWalletBalances from './components/CBWalletBalances.svelte';
@@ -6,13 +7,11 @@
   import type {
     WalletAccount,
     ExchangeV3Account
-    // LoanData  ← no longer needed here
   } from '$lib/server/types';
 
   export let data: {
     wallet: WalletAccount[];
     exchangeV3: ExchangeV3Account[];
-    // loans: LoanData[];  ← drop this
   };
 
   const { wallet, exchangeV3 } = data;
@@ -26,6 +25,5 @@
 
   <CBWalletBalances wallets={wallet} />
 
-  <!-- no props -->
   <CBLoanSummary />
 </section>
