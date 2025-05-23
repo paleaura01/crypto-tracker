@@ -45,7 +45,7 @@
   });
 </script>
 
-<div class="p-4 border rounded max-w-md mx-auto space-y-4">
+<div class="p-4   max-w-md  space-y-4">
   <h2 class="text-xl font-semibold">Manual Loan LTV Calculator</h2>
 
   <div class="grid grid-cols-2 gap-4">
