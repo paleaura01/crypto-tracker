@@ -1,6 +1,6 @@
 // src/routes/api/solana-price/+server.ts
 import type { RequestHandler } from '@sveltejs/kit';
-import { getSolanaPrice } from '$lib/server/coingecko-server';
+import { getSolanaPrice } from '$lib/server/coingeckoServer';
 
 export const GET: RequestHandler = async () => {
   try {
