@@ -1,4 +1,4 @@
-// src/lib/server/cb-client.ts
+// src/lib/server/coinbaseServer.ts
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import nacl from 'tweetnacl';

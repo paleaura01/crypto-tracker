@@ -1,7 +1,7 @@
 <!-- src/routes/portfolio/components/CBLoanSummary.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { btcPrice, startBtcTicker } from '$lib/stores/cbprice';
+  import { btcPrice, startBtcTicker } from '$lib/stores/coinbasePrice';
   import { writable, derived } from 'svelte/store';
 
   // 1) User inputs
