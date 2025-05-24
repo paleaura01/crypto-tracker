@@ -20,6 +20,6 @@
     "env.d.ts",
     "global.d.ts",
     "src/app.d.ts"
-  ],
+, "data"  ],
   "exclude": ["node_modules", ".svelte-kit"]
 }

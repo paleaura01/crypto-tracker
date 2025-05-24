@@ -1,4 +1,3 @@
-// src/routes/api/wallet-address/combined-portfolio/+server.ts
 import type { RequestHandler } from './$types';
 import axios from 'axios';
 
@@ -8,10 +7,12 @@ const CHAINS = ['eth', 'polygon', 'bsc'] as const;
 type Chain = typeof CHAINS[number];
 
 interface MoralisToken {
+  chain: string;
   symbol: string;
   token_address: string;
   balance: string;
   decimals: number;
+  // Moralis can also return name, logo, etc.
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -21,32 +22,31 @@ export const GET: RequestHandler = async ({ url }) => {
   }
 
   try {
-    const perChain = await Promise.all(
-      CHAINS.map(async (chain) => {
-        const res = await axios.get<{ result: unknown }>(
-          `${MORALIS_URL}/wallets/${address}/tokens?chain=${chain}`,
-          { headers: { 'X-API-Key': MORALIS_KEY } }
-        );
-        const raw = res.data.result;
-        if (!Array.isArray(raw)) return [];
-        return (raw as MoralisToken[])
-          .filter((t) => t.balance !== '0')
-          .map((t) => ({
-            symbol:   t.symbol,
-            balance:  Number(t.balance) / 10 ** t.decimals
+    // fetch balances from all EVM chains
+    const all = (
+      await Promise.all(
+        CHAINS.map(async (chain) => {
+          const res = await axios.get<{ result: MoralisToken[] }>(
+            `${MORALIS_URL}/wallets/${address}/tokens?chain=${chain}`,
+            { headers: { 'X-API-Key': MORALIS_KEY } }
+          );
+          return (res.data.result || []).map((t) => ({
+            symbol:           t.symbol,
+            balance:          Number(t.balance) / 10 ** t.decimals,
+            contract_address: t.token_address,
+            chain
           }));
-      })
-    );
+        })
+      )
+    ).flat();
 
-    const walletBalances = perChain.flat();
-    return new Response(JSON.stringify(walletBalances), {
+    return new Response(JSON.stringify(all), {
       headers: { 'Content-Type': 'application/json' }
     });
-
-  } catch (err: any) {
-    console.error('[combined-portfolio]', err);
+  } catch (e: any) {
+    console.error('[combined-portfolio]', e);
     return new Response(
-      JSON.stringify({ error: err.message || 'Fetch failed' }),
+      JSON.stringify({ error: e.message || 'Fetch failed' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
