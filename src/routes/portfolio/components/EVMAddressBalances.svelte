@@ -1,34 +1,48 @@
-<!-- src/routes/portfolio/components/EVMAddressBalances.svelte -->
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { writable, derived, get } from 'svelte/store';
+  // client-only
+  export const ssr = false;
 
-  // 1) UI state
+  import { onDestroy } from 'svelte';
+  import { writable, derived, get } from 'svelte/store';
+  import { startTicker, prices as cbPrices } from '$lib/stores/coinbaseTicker';
+
+  // UI state
   let address = '';
   let loading = false;
   let error = '';
-  const tokens = writable<Array<{ symbol: string; balance: number }>>([]);
+  const tokens = writable<{ symbol: string; balance: number }[]>([]);
 
-  // 2) Live prices store
-  type PriceMap = Record<string, number>;
-  const prices = writable<PriceMap>({});
+  // Coingecko fallback
+  const cgPrices = writable<Record<string,number>>({});
 
-  // 3) Derived list: only those tokens that have a live price
-  const pricedTokens = derived(
-    [tokens, prices],
-    ([$tokens, $prices]) =>
+  // Derived lists
+  const cbTokens = derived(
+    [tokens, cbPrices],
+    ([$tokens, $cb]) =>
       $tokens
-        .filter((t) => $prices[t.symbol] != null)
-        .map((t) => ({
-          ...t,
-          price: $prices[t.symbol],
-          value: t.balance * $prices[t.symbol]
+        .filter(t => $cb[`${t.symbol}-USD`] != null)
+        .map(t => ({
+          symbol:  t.symbol,
+          balance: t.balance,
+          price:   $cb[`${t.symbol}-USD`],
+          value:   t.balance * $cb[`${t.symbol}-USD`]
         }))
   );
 
-  let ws: WebSocket;
+  const cgTokens = derived(
+    [tokens, cbPrices, cgPrices],
+    ([$tokens, $cb, $cg]) =>
+      $tokens
+        .filter(t => $cb[`${t.symbol}-USD`] == null && $cg[t.symbol] != null)
+        .map(t => ({
+          symbol:  t.symbol,
+          balance: t.balance,
+          price:   $cg[t.symbol],
+          value:   t.balance * $cg[t.symbol]
+        }))
+  );
 
-  // 4) Fetch on-chain balances & open WS
+  // Fetch on-chain balances then kick off both feeds
   async function loadOnchain() {
     if (!address) {
       error = 'Enter a wallet address';
@@ -37,14 +51,19 @@
     loading = true;
     error = '';
     tokens.set([]);
-
     try {
       const res = await fetch(`/api/wallet-address/combined-portfolio?address=${encodeURIComponent(address)}`);
       if (!res.ok) throw new Error(await res.text());
-      const data: Array<{ symbol: string; balance: number }> = await res.json();
+      const data: { symbol: string; balance: number }[] = await res.json();
       tokens.set(data);
-      subscribePrices(data.map((t) => t.symbol));
-    } catch (e: any) {
+
+      // Coinbase feed (e.g. ["ETH-USD","GRT-USD",…])
+      const proIds = data.map(t => `${t.symbol}-USD`);
+      startTicker(proIds);
+
+      // Coingecko fallback
+      fetchCgPrices(data.map(t => t.symbol));
+    } catch (e:any) {
       console.error(e);
       error = e.message || 'Failed to load on-chain balances';
     } finally {
@@ -52,118 +71,90 @@
     }
   }
 
-  // 5) Subscribe to Coinbase WS for USD tickers
-  function subscribePrices(symbols: string[]) {
-    // If already open, close and reset
-    if (ws) {
-      ws.close();
-      prices.set({});
-    }
+  async function fetchCgPrices(symbols: string[]) {
+    const existing = get(cbPrices);
+    const missing  = symbols
+      .filter(s => existing[`${s}-USD`] == null)
+      .map(s => s.toLowerCase())
+      .join(',');
+    if (!missing) return;
 
-    ws = new WebSocket('wss://ws-feed.exchange.coinbase.com');
-    ws.addEventListener('open', () => {
-      ws.send(
-        JSON.stringify({
-          type: 'subscribe',
-          channels: [{
-            name: 'ticker',
-            product_ids: symbols.map((sym) => `${sym}-USD`)
-          }]
-        })
+    try {
+      const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${missing}&vs_currencies=usd`);
+      if (!res.ok) throw new Error('Coingecko fetch failed');
+      const data = await res.json() as Record<string,{usd:number}>;
+      cgPrices.set(
+        Object.fromEntries(Object.entries(data).map(([id,v]) => [id.toUpperCase(), v.usd]))
       );
-    });
-
-    ws.addEventListener('message', (evt) => {
-      try {
-        const msg = JSON.parse(evt.data);
-        if (msg.type === 'ticker' && msg.product_id && msg.price) {
-          const [sym] = msg.product_id.split('-');
-          prices.update((p) => {
-            p[sym] = parseFloat(msg.price);
-            return p;
-          });
-        }
-      } catch {
-        // ignore
-      }
-    });
-
-    ws.addEventListener('error', (err) => console.error('WS error', err));
-    ws.addEventListener('close', () => {
-      // try to reconnect after a delay
-      setTimeout(() => subscribePrices(symbols), 3000);
-    });
+    } catch (e) {
+      console.error('Coingecko error', e);
+    }
   }
 
-  onDestroy(() => {
-    if (ws) ws.close();
-  });
+  // no socket to tear down here—store handles it
+  onDestroy(() => {});
 </script>
 
 <style>
-  .scrollable {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    border-radius: 0.25rem;
-    padding: 0.5rem;
-  }
-  .row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.25rem 0;
-    border-bottom: 1px solid #eee;
-  }
-  .row:last-child {
-    border-bottom: none;
-  }
+  .scrollable { max-height:240px; overflow-y:auto; border:1px solid #ccc; padding:.5rem; border-radius:.25rem }
+  .row { display:flex; justify-content:space-between; padding:.25rem 0; border-bottom:1px solid #eee }
+  .row:last-child { border-bottom:none }
 </style>
 
-<div class="space-y-4">
+<div class="space-y-6">
+  <!-- On-chain loader -->
   <div>
-    <h2 class="text-xl font-semibold">On-Chain Balances</h2>
+    <h2>On-Chain Balances</h2>
     <div class="flex items-center space-x-2 mt-2">
       <input
-        type="text"
         bind:value={address}
         placeholder="0x… address"
         class="border p-2 rounded flex-1"
       />
-      <button
-        on:click={loadOnchain}
-        class="btn btn-primary"
-        disabled={loading}
-      >
+      <button on:click={loadOnchain} class="btn btn-primary" disabled={loading}>
         {#if loading}Loading…{:else}Load Balances{/if}
       </button>
     </div>
-    {#if error}
-      <p class="text-red-500 mt-2">{error}</p>
-    {/if}
+    {#if error}<p class="text-red-500 mt-2">{error}</p>{/if}
   </div>
 
+  <!-- Coinbase-priced tokens -->
   <div>
-    <h3 class="font-medium">Tokens with Live USD Prices</h3>
-    <div class="scrollable mt-2">
-      {#if $pricedTokens.length}
-        {#each $pricedTokens as t}
+    <h3>Tokens with Coinbase USD Prices</h3>
+    <div class="scrollable">
+      {#if $cbTokens.length}
+        {#each $cbTokens as t}
           <div class="row">
-            <div>
-              <strong>{t.symbol}</strong> × {t.balance.toFixed(6)}
-            </div>
-            <div>
-              ${t.price.toFixed(2)} → ${(t.value).toFixed(2)}
-            </div>
+            <div><strong>{t.symbol}</strong> × {t.balance.toFixed(6)}</div>
+            <div>${t.price.toFixed(2)} → ${(t.value).toFixed(2)}</div>
           </div>
         {/each}
       {:else if !loading}
-        <p>No tokens with live USD pairs found.</p>
+        <p>No live Coinbase pairs.</p>
       {/if}
     </div>
   </div>
 
+  <!-- Coingecko tokens -->
   <div>
-    <h3 class="font-medium">Raw JSON</h3>
+    <h3>Tokens with Coingecko USD Prices</h3>
+    <div class="scrollable">
+      {#if $cgTokens.length}
+        {#each $cgTokens as t}
+          <div class="row">
+            <div><strong>{t.symbol}</strong> × {t.balance.toFixed(6)}</div>
+            <div>${t.price.toFixed(2)} → ${(t.value).toFixed(2)}</div>
+          </div>
+        {/each}
+      {:else if !loading}
+        <p>No Coingecko matches.</p>
+      {/if}
+    </div>
+  </div>
+
+  <!-- raw JSON -->
+  <div>
+    <h3>Raw JSON</h3>
     <pre class="bg-gray-100 p-2 rounded max-h-48 overflow-auto">
 {JSON.stringify($tokens, null, 2)}
     </pre>

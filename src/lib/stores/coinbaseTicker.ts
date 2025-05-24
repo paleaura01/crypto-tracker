@@ -3,12 +3,11 @@ import { writable } from 'svelte/store';
 
 type PriceMap = Record<string, number>;
 const prices = writable<PriceMap>({});
-
 let ws: WebSocket | null = null;
 
 /**
- * Start (or reuse) a single WS connection and subscribe
- * to the given product-ids (e.g. [ 'BTC-USD', 'ETH-USD' ]).
+ * Subscribe to USD tickers for the given product IDs.
+ * Reuses a single WS under the hood.
  */
 export function startTicker(productIds: string[]) {
   if (!ws) {
@@ -20,23 +19,23 @@ export function startTicker(productIds: string[]) {
           prices.update((p) => ({ ...p, [msg.product_id]: parseFloat(msg.price) }));
         }
       } catch {
-        /* ignore */
+        // ignore
       }
     });
     ws.addEventListener('close', () => {
       ws = null;
-      // Reconnect after a bit…
       setTimeout(() => startTicker(productIds), 3000);
     });
     ws.addEventListener('error', console.error);
   }
 
-  // Once open (or immediately if already open), send subscribe
   const subscribe = () => {
-    ws!.send(JSON.stringify({
-      type: 'subscribe',
-      channels: [{ name: 'ticker', product_ids: productIds }]
-    }));
+    ws!.send(
+      JSON.stringify({
+        type: 'subscribe',
+        channels: [{ name: 'ticker', product_ids: productIds }]
+      })
+    );
   };
 
   if (ws.readyState === WebSocket.OPEN) {
