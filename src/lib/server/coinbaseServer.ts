@@ -1,6 +1,5 @@
 // src/lib/server/coinbaseServer.ts
 import { supabaseServer } from './supabaseServer';
-import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
 import nacl from 'tweetnacl';
@@ -16,8 +15,9 @@ import type {
 const CB_API_HOST = 'api.coinbase.com';
 const V2_PATH     = '/api/v2/accounts';
 const V3_PATH     = '/api/v3/brokerage/accounts';
-const LOANS_PATH  = '/api/v2/margin/loans';
 const CB_VERSION  = '2025-01-01';
+const CUSTODIAL_PATH = '/api/v2/accounts';
+
 
 // Load raw key from your profiles table
 async function loadRawKey(userId: string): Promise<any> {
@@ -136,4 +136,22 @@ export async function fetchLoanData(userId: string): Promise<LoanData[]> {
 }
 export async function getCoinbaseKey(userId: string): Promise<any> {
   return loadRawKey(userId);
+}
+
+/** A custodial Coinbase.com wallet account */
+export interface CustodialAccount {
+  id: string;
+  name: string;
+  balance: { amount: string; currency: string };
+}
+
+export async function fetchCustodialBalances(
+  userId: string
+): Promise<CustodialAccount[]> {
+  // this will return all your Coinbase.com wallets (custodial)
+  const { data } = await cbGet<{ data: CustodialAccount[] }>(
+    userId,
+    CUSTODIAL_PATH
+  );
+  return data;
 }

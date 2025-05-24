@@ -28,3 +28,10 @@ export interface LoanData {
   collateral: number;    // BTC collateral amount
   loanAmount: number;    // USDC borrowed amount
 }
+
+/** New: Coinbase custodial wallet account */
+export interface CustodialAccount {
+  id: string;
+  name: string;
+  balance: { amount: string; currency: string };
+}

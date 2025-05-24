@@ -5,13 +5,15 @@ import {
   fetchExchangeV2,
   fetchExchangeV3,
   fetchWalletBalances,
-  fetchLoanData
+  fetchLoanData,
+  fetchCustodialBalances
 } from '$lib/server/coinbaseServer';
 import type {
   ExchangeV2Account,
   ExchangeV3Account,
   WalletAccount,
-  LoanData
+  LoanData,
+  CustodialAccount
 } from '$lib/server/types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -19,38 +21,38 @@ export const load: PageServerLoad = async ({ locals }) => {
   if (!session?.user) throw redirect(303, '/auth/login');
   const userId = session.user.id;
 
-  // ensure coinbase key
-  let hasKey = true;
-  try { await getCoinbaseKey(userId); }
-  catch { hasKey = false; }
+  let hasCoinbaseKey = true;
+  try {
+    await getCoinbaseKey(userId);
+  } catch {
+    hasCoinbaseKey = false;
+  }
 
-  if (!hasKey) {
+  if (!hasCoinbaseKey) {
     return {
       hasCoinbaseKey: false,
-      exchangeV2: [] as ExchangeV2Account[],
-      exchangeV3: [] as ExchangeV3Account[],
-      wallet: [] as WalletAccount[],
-      loans: [] as LoanData[],
-      userId            // ← include here
+      exchangeV2:     [] as ExchangeV2Account[],
+      exchangeV3:     [] as ExchangeV3Account[],
+      wallet:         [] as WalletAccount[],
+      loans:          [] as LoanData[],
+      custodial:      [] as CustodialAccount[]
     };
   }
 
-  const [exchangeV2, exchangeV3] = await Promise.all([
+  const [exchangeV2, exchangeV3, wallet, loans, custodial] = await Promise.all([
     fetchExchangeV2(userId),
-    fetchExchangeV3(userId)
+    fetchExchangeV3(userId),
+    fetchWalletBalances(userId),
+    fetchLoanData(userId),
+    fetchCustodialBalances(userId)
   ]);
 
-  let wallet: WalletAccount[] = [];
-  try { wallet = await fetchWalletBalances(userId); } catch {}
-  let loans: LoanData[] = [];
-  try { loans = await fetchLoanData(userId); } catch {}
-
   return {
-    hasCoinbaseKey: true,
+    hasCoinbaseKey,
     exchangeV2,
     exchangeV3,
     wallet,
     loans,
-    userId           // ← and here
+    custodial
   };
 };

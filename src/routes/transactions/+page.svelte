@@ -66,28 +66,7 @@
     input, button { margin-right: .5rem; }
   </style>
   
-  <div class="section dark:text-white">
-    <h2>Coinbase Balances</h2>
-    <div>
-      <input placeholder="Key ID"      bind:value={keyId}      style="width:200px"/>
-      <input placeholder="API Secret"  bind:value={secret}     style="width:200px" type="password"/>
-      <input placeholder="Passphrase"  bind:value={passphrase} style="width:200px" type="password"/>
-      <button on:click={loadCBBalances} disabled={loadingCB}>
-        {#if loadingCB}Loading…{:else}Load Balances{/if}
-      </button>
-    </div>
-    {#if errorCB}
-      <p class="error">{errorCB}</p>
-    {:else if cbBalances.length}
-      <ul>
-        {#each cbBalances as { currency, balance }}
-          <li>{currency}: {balance.amount}</li>
-        {/each}
-      </ul>
-    {:else if !loadingCB}
-      <p>No Coinbase balances found.</p>
-    {/if}
-  </div>
+
   
   <div class="section dark:text-white">
     <h2>On-Chain Balances</h2>
