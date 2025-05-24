@@ -1,6 +1,7 @@
 <script lang="ts">
   import CoinbaseExchange from './components/CBExchangeBalances.svelte';
   import CBLoanSummary from './components/CBLoanSummary.svelte';
+  import EVMAddressBalances from './components/EVMAddressBalances.svelte';
 
   import type {
     WalletAccount,
@@ -18,6 +19,8 @@
 </script>
 
 <section class="p-4 space-y-8">
+    <!-- Your on-chain one-off balances via Moralis -->
+  <EVMAddressBalances />
   <CBLoanSummary loans={loans} />
   <CoinbaseExchange
     wallets={wallet}

@@ -11,7 +11,8 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "preserveValueImports": false
+    "preserveValueImports": false,
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*",
