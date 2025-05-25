@@ -461,9 +461,11 @@
   <div class="section">
     <h3>Manage Address Overrides</h3>
     <div class="scroll">
-      {#each Array.from(new Set(rawOnchain.map(t=>t.contract_address.toLowerCase()))) as addr}
+      {#each Array.from(new Set(rawOnchain.map(t=>`${t.contract_address.toLowerCase()}-${t.chain}`))) as chainKey}
+        {@const [addr, chain] = chainKey.split('-')}
+        {@const token = rawOnchain.find(t=>t.contract_address.toLowerCase()===addr && t.chain===chain)}
         <div class="row">
-          <span>{addr} ({rawOnchain.find(t=>t.contract_address.toLowerCase()===addr)?.symbol})</span>
+          <span>{addr} ({token?.symbol} on {chain})</span>
           <span class="space-x-2">
             <button type="button" on:click={() => {
               editingAddress = addr;
