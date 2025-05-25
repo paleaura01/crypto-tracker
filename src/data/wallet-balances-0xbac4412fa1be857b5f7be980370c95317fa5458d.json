@@ -1,0 +1,566 @@
+[
+  {
+    "symbol": "ETH",
+    "balance": 0.000013249070247,
+    "contract_address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "chain": "eth"
+  },
+  {
+    "symbol": "POL",
+    "balance": 0.07829764925349099,
+    "contract_address": "0x0000000000000000000000000000000000001010",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "0Bets.io",
+    "balance": 3000000,
+    "contract_address": "0xf31cdb090d1d4b86a7af42b62dc5144be8e42906",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "GLM",
+    "balance": 1.576919207365995,
+    "contract_address": "0x0b220b82f3ea3b7f6d9a1d8ab58930c064a2b5bf",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "WETH",
+    "balance": 9.26483915243e-7,
+    "contract_address": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "MDUS",
+    "balance": 0.25,
+    "contract_address": "0xab9cb20a28f97e189ca0b666b8087803ad636b3c",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "RISY",
+    "balance": 100,
+    "contract_address": "0xca154cf88f6ffbc23e16b5d08a9bf4851fb97199",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim [airdrop.hair]to earn up to $5000 WLD",
+    "balance": 50,
+    "contract_address": "0xf4f88378ec7d59543dff3d2ee296ca72635f9e83",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "$Visit Reward at [ airdrop.li ]",
+    "balance": 600,
+    "contract_address": "0xf6adb999eb3ca5b010ae19edcf54483f14a74b57",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "TAIKO Link to Сlaim : https://dtaiko.xyz",
+    "balance": 1e-18,
+    "contract_address": "0xf7af6c175c1b803541fee8d945b70f475efbd834",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "ETH AT [adrp-ether.lol]",
+    "balance": 5,
+    "contract_address": "0xfe62d820c0e605ba8c50b724057966df68faf725",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit [5000usdc.org] to claim Airdrop",
+    "balance": 1,
+    "contract_address": "0xfe8a11812ce972296980618b744ab09deda39950",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "POL",
+    "balance": 0.07829764925349099,
+    "contract_address": "0x0000000000000000000000000000000000001010",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "3000MATIC Reward at matics.vip",
+    "balance": 1,
+    "contract_address": "0x00396536faa016860f3c82e47b0102e857abf068",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit https://matic-claims.com to Claim",
+    "balance": 2000,
+    "contract_address": "0x07aba8bf22f5309e5b766a92554d3b14f639549e",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "!Ads BTC Casino www.MaticSlot.io",
+    "balance": 69.69,
+    "contract_address": "0x07b1d6c3f66f800a8e6274a3c5331f76e7b58c39",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "visit [ erc20.lol ] to earn up to 1 eth",
+    "balance": 1e-18,
+    "contract_address": "0x08839dc7913205d78d061cc06ede26376e389fc7",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Fyde Points - www.fyde.cc",
+    "balance": 104745,
+    "contract_address": "0x0aa883d74f8088bbddecf3c8acebad5415559698",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "MNEP",
+    "balance": 300000,
+    "contract_address": "0x0b91b07beb67333225a5ba0259d55aee10e3a578",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "MATICSWAP.NET",
+    "balance": 5800,
+    "contract_address": "0x14f2c84a58e065c846c5fdddade0d3548f97a517",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim on https://matic-claims.com",
+    "balance": 2000,
+    "contract_address": "0x15add059ecbc5f97ee0f6515075ba09d86010df0",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "MORSE- Reveal yours https://morsenft.com",
+    "balance": 1,
+    "contract_address": "0x161d1277c19826be20f470626dfaa9706d05bf1d",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Ads: BNB Casino www.MaticSlot.io",
+    "balance": 69.69,
+    "contract_address": "0x191bbe4fa88617700fc9d2f29c34151f32deeab7",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim on: venom-foundations.net/?claim",
+    "balance": 100000,
+    "contract_address": "0x19bb39e7e06e0e5bcf36ddf30e236d7fe4b8bde5",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "LELX.io",
+    "balance": 43557.2,
+    "contract_address": "0x22e51bae3f545255e115090202a23c7ede0b00b9",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "AeFX.io",
+    "balance": 799999.9999999999,
+    "contract_address": "0x2744861accb5bd435017c1cfee789b6ebab42082",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "visit [ erc20.lol ] to earn up to 1 eth",
+    "balance": 1e-18,
+    "contract_address": "0x29ca000a32550c7db9be2aee9dfa4211a4202151",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "5ETH at [web3eth.vip]",
+    "balance": 5,
+    "contract_address": "0x2a937a4d9bb539248e1da122c653916b2832b2db",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Dove",
+    "balance": 6.54725705507972,
+    "contract_address": "0x2bf56908b0f2440ad11169d281967eb76665f8c6",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Fyde Points - www.fyde.pw",
+    "balance": 153250,
+    "contract_address": "0x2ee487ed53016636a5dc66ffdfdd940e5f9a87c5",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "ACCESS [ETHENA-ETHER.COM] TO CLAIM",
+    "balance": 5861,
+    "contract_address": "0x35dd6626c082742771679ef637f1f047a84dee44",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit [5000usdc.org] to claim Airdrop",
+    "balance": 1,
+    "contract_address": "0x36c3f893e41f41430bc8bae6455fef9a0cdd66cc",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "claim $foxy at   me-qr.com/sh8qCZ0Z",
+    "balance": 14499.999999999998,
+    "contract_address": "0x3fc5274873bf2a3add852c69c239a5f8974e3212",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit Tether.re to claim 10000 Rewards",
+    "balance": 900000000,
+    "contract_address": "0x41af77c55ade7e572f56118a0947fa8df79ef386",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "YOUMEME",
+    "balance": 0.1,
+    "contract_address": "0x531f83800425a0c4c6964e41d843798e5822b829",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit steth.cc to swap Reward",
+    "balance": 900000000000000,
+    "contract_address": "0x5a1df046cb2c346ed5859968b78be83522f42ffa",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "5ETH at [web3eth.vip]",
+    "balance": 5,
+    "contract_address": "0x60663865a7575d4720747a2c4fd3bd1aebc404bb",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "UNC - Claim: t.ly/UNC",
+    "balance": 1,
+    "contract_address": "0x62359ba60fd9a6dd728d3e26722f685b8ede00c7",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "claim $foxy at   me-qr.com/7esXbQ4l",
+    "balance": 14499.999999999998,
+    "contract_address": "0x6a949c215957fb10aef564ea832318cc59ea9a01",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "wHEX",
+    "balance": 172800,
+    "contract_address": "0x6db7184f41d726159a43beffe16940c23d099ae7",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "ETH AT [adrp-ether.lol]",
+    "balance": 5,
+    "contract_address": "0x6f4b883955cb0182f8a0d19ccdcbc4e471c5da4b",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "visit [layerzerowork.com] to earn up to 12,000,000 $ZRO",
+    "balance": 1e-18,
+    "contract_address": "0x7760f2612c7157d71190502a4ebb37666e6d80d6",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "0Bets.io",
+    "balance": 3000000,
+    "contract_address": "0x7f4c2f7671e6817bb01195d24e4eafc94435f5d0",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit shiba.claimreward.org to claim reward",
+    "balance": 5000,
+    "contract_address": "0x7f6d38043e939411cc578e74dcf06577889e8c75",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "DxDex.io",
+    "balance": 799999.9999999999,
+    "contract_address": "0x81067076dcb7d3168ccf7036117b9d72051205e2",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Ads: SOL Casino www.MaticSlot.io",
+    "balance": 69.69,
+    "contract_address": "0x825f8430d24ddd2024e7334197b7dc593193608d",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "ACCESS [ STETH.AC ] TO CLAIM AIRDROP",
+    "balance": 35800,
+    "contract_address": "0x87e44164224972f505a8fde1f337b3f4636d837b",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "PolygonClassics.com",
+    "balance": 1497,
+    "contract_address": "0x8a6b62f5501410d179641e731a8f1cecef1c28ec",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit usdtg.org to claim rewards!",
+    "balance": 3000,
+    "contract_address": "0x8b534cb35e5f1fea7aab8040eec52803cc3b5edb",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "5000usdt.com",
+    "balance": 2,
+    "contract_address": "0x8bcae3bfc903948396f3e68f79590c3978224e72",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "BOSQUE",
+    "balance": 1000,
+    "contract_address": "0x8ea65939c92b5292eed7254d4ab8993813e46887",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit [10BNB.US] to claim rewards",
+    "balance": 10,
+    "contract_address": "0x905f699f7c03474f862ea218cc3d4263bae2a22c",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "VISIT [ layerzero.beauty ] TO CLAIM 5000$ REWARDS",
+    "balance": 1,
+    "contract_address": "0x90f4ba2ab91163bfae67b42f1cfe7a996207b514",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Ads: POL Casino www.MaticSlot.io",
+    "balance": 69.69,
+    "contract_address": "0x950ddb91842c58814ed4ee7077ce35632225797e",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim on https://matic-claims.com",
+    "balance": 2000,
+    "contract_address": "0x958238e727d32224c5f126d69d54aa3acb6dff56",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "MaticSlot",
+    "balance": 1,
+    "contract_address": "0x97f9f6a663cc5973a8f467735963038ebb7403e9",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim on chain.link-claim.ltd",
+    "balance": 600,
+    "contract_address": "0x9f1d52f0ae0f186b65a9bf3228bfa5ada2db01ac",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "UЅDС - [ t.ly/USPOOL ] - *claim until 12.04.25",
+    "balance": 1,
+    "contract_address": "0x9f95c1eef908842aada7038e5c64d46eece8f0e4",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "5ETH voucher at [adrp-ether.xyz]",
+    "balance": 5,
+    "contract_address": "0xa226ba48fb250b89fcc9d0948a5a27321db4382b",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "claim $foxy at   me-qr.com/Z87hCU2n",
+    "balance": 10195,
+    "contract_address": "0xa332eaec3aaa632cad8a57d0f774d8bc55bdb3df",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit USD.AC to claim reward",
+    "balance": 10000,
+    "contract_address": "0xa39621f9d01792699d4368eef3031fef2aafd3ca",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "5 ETH AT ETHERI.ORG",
+    "balance": 5,
+    "contract_address": "0xa72daf2608500db6b1b97f6ffcf9891d3ded47e8",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "FlowDAO.io",
+    "balance": 799999.9999999999,
+    "contract_address": "0xa85f8a198d59f0fda82333be9aeeb50f24dd59ff",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "$ Free Claim and Play",
+    "balance": 500,
+    "contract_address": "0xaf6b1a3067bb5245114225556e5b7a52cf002752",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "!Ads ETH Casino www.MaticSlot.io",
+    "balance": 69.69,
+    "contract_address": "0xb4e073b6030691abc0abba383aff2098d90279aa",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "(ACCESS {10000USDT.COM} TO CLAIM YOUR TOKENS)",
+    "balance": 10000,
+    "contract_address": "0xb90d12831dbe834282b5d27a9f9386992b4130d5",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Reward at 1000usdc.lol",
+    "balance": 1,
+    "contract_address": "0xb937643ce0d14d6e6f1e3aa78163e8a26c6050d2",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim [airdrop.hair]to earn up to $5000 WLD",
+    "balance": 1,
+    "contract_address": "0xc0c89d165b30c42384be4bcc5d62afab34feb183",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "LiquidEther rewards on https://stkether.com",
+    "balance": 1,
+    "contract_address": "0xc0d001f95fc1a7db8c77dc53ef93b16e6303c73b",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit rocketpool.win to claim 10 rETH.",
+    "balance": 900000000,
+    "contract_address": "0xcc70b79e8d398b36670f73782960ea43dbcbd853",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "claim $foxy at   me-qr.com/KiXzv9PM",
+    "balance": 12499.999999999998,
+    "contract_address": "0xce30dc06b0f4acd500d661735242cc3fcdbf75a9",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "matic-rewards.xyz",
+    "balance": 800,
+    "contract_address": "0xd2da8c2677252c7809a0c3b3f048db4833fe2583",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "View Airdrops at https://airdapp.net",
+    "balance": 1,
+    "contract_address": "0xd30e427b700e76fb6e08d388fd5d71e2e3d0b479",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim: https://wbtc.win",
+    "balance": 20,
+    "contract_address": "0xd5bb6e37c21f424494ee825e687569e81730be68",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "HOPE",
+    "balance": 0.6411734320502979,
+    "contract_address": "0xd78c475133731cd54dadcb430f7aae4f03c1e660",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Zers.io",
+    "balance": 11287,
+    "contract_address": "0xd7f1d4f5a1b44d827a7c3cc5dd46a80fade55558",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit AAEV.AC to claim reward tokens.",
+    "balance": 900000000,
+    "contract_address": "0xd8947f9637020bff32b0c86c910980d8861c56cb",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "claim $foxy at   me-qr.com/sh8qCZ0Z",
+    "balance": 14499.999999999998,
+    "contract_address": "0xd98f96392d0bb84d5c5a7f64d282433c2f92e5cd",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit Chain-Link.ltd",
+    "balance": 900,
+    "contract_address": "0xdb35308e49953ac14c8e1dd30052bd07f9516d0b",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Draf.io",
+    "balance": 288101,
+    "contract_address": "0xdc8fa3fab8421ff44cc6ca7f966673ff6c0b3b58",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Claim [airdrop.hair]to earn up to $5000 WLD",
+    "balance": 33,
+    "contract_address": "0xe5a81d2459f608f6896c68b78cf185cbe6f7b53f",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "$ YOUR LIDO ON:lid-ethen.com @",
+    "balance": 14000,
+    "contract_address": "0xe6e5c52524b2e164c91f38d035b497a3a141b138",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit https://matic-claims.com to Claim",
+    "balance": 3000,
+    "contract_address": "0xe6f9a91e9368cf4b2295c8aaba1838fbfd17f01d",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit Rocketpool.win to claim reward.",
+    "balance": 9000000000,
+    "contract_address": "0xed314a7d85eb37ccc1bb49dd242b4a05ae1a0ed8",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Reward at 5000usdt.com",
+    "balance": 1,
+    "contract_address": "0xee6cc0fbc2175e245e281d4bf75b0251fa6f18d5",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "Visit https://matic-claims.com to Claim",
+    "balance": 2000,
+    "contract_address": "0xefa8732973d61ba06cb0274d0b190bd8ad0df2d0",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "dQUICK",
+    "balance": 0.000048310432302362,
+    "contract_address": "0xf28164a485b0b2c90639e47b0f377b4a438a16b1",
+    "chain": "polygon"
+  },
+  {
+    "symbol": "BNB",
+    "balance": 0.00005258,
+    "contract_address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "chain": "bsc"
+  },
+  {
+    "symbol": "JMPT",
+    "balance": 2.536639579401025,
+    "contract_address": "0x88d7e9b65dc24cf54f5edef929225fc3e1580c25",
+    "chain": "bsc"
+  },
+  {
+    "symbol": "DBT",
+    "balance": 440,
+    "contract_address": "0x0b7dc561777842d55163e0f48886295aad1359b9",
+    "chain": "bsc"
+  },
+  {
+    "symbol": "Dex88.org",
+    "balance": 799999.9999999999,
+    "contract_address": "0x27b880865395da6cda9c407e5edfcc32184cf429",
+    "chain": "bsc"
+  },
+  {
+    "symbol": "MKS",
+    "balance": 6500000,
+    "contract_address": "0x64f2c2aa04755507a2ecd22ceb8c475b7a750a3a",
+    "chain": "bsc"
+  },
+  {
+    "symbol": "AkkSwap.io",
+    "balance": 32000,
+    "contract_address": "0xa9127695fc461564beca5643430cecccde2fa751",
+    "chain": "bsc"
+  },
+  {
+    "symbol": "ORBIT",
+    "balance": 58397,
+    "contract_address": "0xdfb8603d947ab42fb76eb3bb14d9dde4334130d2",
+    "chain": "bsc"
+  }
+]

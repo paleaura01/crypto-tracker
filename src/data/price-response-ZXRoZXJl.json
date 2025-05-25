@@ -1,0 +1,43 @@
+{
+  "ids": [
+    "ethereum",
+    "bittorrent",
+    "golem",
+    "polygon-pos-bridged-weth-polygon-pos",
+    "medieus",
+    "dove-the-dog",
+    "history-of-pepe",
+    "dragons-quick",
+    "jumptoken"
+  ],
+  "prices": {
+    "bittorrent": {
+      "usd": 7.20764e-7
+    },
+    "dove-the-dog": {
+      "usd": 0.00020729
+    },
+    "dragons-quick": {
+      "usd": 0.068364
+    },
+    "ethereum": {
+      "usd": 2486.91
+    },
+    "golem": {
+      "usd": 0.257334
+    },
+    "history-of-pepe": {
+      "usd": 0.00119147
+    },
+    "jumptoken": {
+      "usd": 1.013
+    },
+    "medieus": {
+      "usd": 0.00044128
+    },
+    "polygon-pos-bridged-weth-polygon-pos": {
+      "usd": 2492.39
+    }
+  },
+  "timestamp": 1748166950549
+}
