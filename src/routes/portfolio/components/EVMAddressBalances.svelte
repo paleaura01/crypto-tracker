@@ -246,10 +246,12 @@
     for (const t of rawOnchain) {
       const a = t.contract_address.toLowerCase();
       const s = t.symbol.toUpperCase();
+      const chainKey = `${a}-${t.chain}`; // Use address+chain as unique key
       
       console.log(`\n🔍 Processing token: ${s} on ${t.chain}`);
       console.log(`   Address: ${a}`);
       console.log(`   Balance: ${t.balance}`);
+      console.log(`   Chain key: ${chainKey}`);
       
       // Special BNB debugging
       if (s === 'BNB') {
@@ -264,15 +266,15 @@
         console.log(`   Symbol override value: ${symOv[s]}`);
       }
       
-      if (seen.has(a)) {
-        console.log(`   ⏭️ Skipping duplicate address`);
+      if (seen.has(chainKey)) {
+        console.log(`   ⏭️ Skipping duplicate address+chain: ${chainKey}`);
         continue;
       }
 
       // 1) address override
       if (a in addrOv) {
         console.log(`   🎯 Found address override: ${addrOv[a]}`);
-        seen.add(a);
+        seen.add(chainKey);
         if (addrOv[a]) {
           picks.push({ token:t, cgId:addrOv[a]! });
           console.log(`   ✅ Added via address override`);
@@ -285,7 +287,7 @@
       // 2) symbol override
       if (s in symOv) {
         console.log(`   🎯 Found symbol override: ${symOv[s]}`);
-        seen.add(a);
+        seen.add(chainKey);
         if (symOv[s]) {
           picks.push({ token:t, cgId:symOv[s]! });
           console.log(`   ✅ Added via symbol override`);
@@ -298,7 +300,7 @@
       // 3) native sentinel
       if (a === ZERO || a === SENT) {
         console.log(`   🏛️ Native token detected for ${t.chain} -> ${native[t.chain]}`);
-        seen.add(a);
+        seen.add(chainKey);
         picks.push({ token:t, cgId:native[t.chain] });
         console.log(`   ✅ Added as native token`);
         continue;
@@ -311,7 +313,7 @@
       );
       if (plat) {
         console.log(`   🌐 Found platform match: ${plat.id}`);
-        seen.add(a);
+        seen.add(chainKey);
         picks.push({ token:t, cgId:plat.id });
         console.log(`   ✅ Added via platform lookup`);
         continue;
@@ -321,7 +323,7 @@
       const sym = coinList.find(c => c.symbol.toUpperCase() === s);
       if (sym) {
         console.log(`   🔤 Found symbol fallback: ${sym.id}`);
-        seen.add(a);
+        seen.add(chainKey);
         picks.push({ token:t, cgId:sym.id });
         console.log(`   ✅ Added via symbol fallback`);
       } else {
