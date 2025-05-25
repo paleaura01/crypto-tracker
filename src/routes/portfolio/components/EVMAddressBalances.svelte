@@ -359,16 +359,34 @@
         continue;
       }
 
-      // 4) platform lookup
+      // 4) platform lookup (chain-specific)
+      const platformMap = { eth: 'ethereum', polygon: 'polygon-pos', bsc: 'binance-smart-chain' };
+      const platformKey = platformMap[t.chain];
+      
       const plat = coinList.find(c =>
         c.platforms
-        && Object.values(c.platforms).some(p=>p?.toLowerCase()===a)
+        && c.platforms[platformKey]?.toLowerCase() === a
       );
       if (plat) {
-        console.log(`   🌐 Found platform match: ${plat.id}`);
+        console.log(`   🌐 Found platform match for ${t.chain}: ${plat.id}`);
+        console.log(`   🔍 Matched address: ${a} on platform: ${platformKey}`);
         seen.add(chainKey);
         picks.push({ token:t, cgId:plat.id });
         console.log(`   ✅ Added via platform lookup`);
+        continue;
+      }
+      
+      // Fallback: check all platforms if chain-specific lookup failed
+      const platFallback = coinList.find(c =>
+        c.platforms
+        && Object.values(c.platforms).some(p=>p?.toLowerCase()===a)
+      );
+      if (platFallback) {
+        console.log(`   🌐 Found fallback platform match: ${platFallback.id}`);
+        console.log(`   ⚠️ Using fallback lookup - consider adding chain mapping`);
+        seen.add(chainKey);
+        picks.push({ token:t, cgId:platFallback.id });
+        console.log(`   ✅ Added via fallback platform lookup`);
         continue;
       }
 
@@ -483,9 +501,13 @@
               editSymbolCgId = get(symbolOverrideMap)[sym] || '';
             }}>Edit</button>
             <button type="button" on:click={async () => {
-              symbolOverrideMap.update(m => ({ ...m, [sym]: null }));
+              symbolOverrideMap.update(m => {
+                const newMap = { ...m };
+                delete newMap[sym];
+                return newMap;
+              });
               await saveOverrides();
-              loadRaw();
+              computePortfolio();
             }}>Remove</button>
           </span>
         </div>
@@ -505,11 +527,27 @@
             />
             <div class="flex space-x-2">
               <button type="button" on:click={async () => {
-                const id = editSymbolCgId==='__NONE__'?null:editSymbolCgId||null;
+                let id;
+                if (editSymbolCgId === '__NONE__') {
+                  id = null; // Explicitly exclude
+                } else if (editSymbolCgId && editSymbolCgId.trim()) {
+                  id = editSymbolCgId.trim(); // Use the specified ID
+                } else {
+                  // Empty/blank - remove from overrides to allow auto-detection
+                  symbolOverrideMap.update(m => {
+                    const newMap = { ...m };
+                    delete newMap[sym];
+                    return newMap;
+                  });
+                  editingSymbol = null;
+                  await saveOverrides();
+                  computePortfolio();
+                  return;
+                }
                 symbolOverrideMap.update(m => ({ ...m, [sym]: id }));
                 editingSymbol = null;
                 await saveOverrides();
-                loadRaw();
+                computePortfolio();
               }} class="bg-blue-500 text-white px-3 py-1 rounded text-sm">Save</button>
               <button type="button" on:click={() => editingSymbol=null} class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Cancel</button>
             </div>
@@ -534,9 +572,13 @@
               editAddressCgId = get(addressOverrideMap)[addr] || '';
             }}>Edit</button>
             <button type="button" on:click={async () => {
-              addressOverrideMap.update(m => ({ ...m, [addr]: null }));
+              addressOverrideMap.update(m => {
+                const newMap = { ...m };
+                delete newMap[addr];
+                return newMap;
+              });
               await saveOverrides();
-              loadRaw();
+              computePortfolio();
             }}>Remove</button>
           </span>
         </div>
@@ -548,10 +590,19 @@
               class="border p-1 rounded w-full"
             />
             <button type="button" on:click={async () => {
-              addressOverrideMap.update(m => ({ ...m, [addr]: editAddressCgId||null }));
+              if (editAddressCgId && editAddressCgId.trim()) {
+                addressOverrideMap.update(m => ({ ...m, [addr]: editAddressCgId.trim() }));
+              } else {
+                // Empty/blank - remove from overrides
+                addressOverrideMap.update(m => {
+                  const newMap = { ...m };
+                  delete newMap[addr];
+                  return newMap;
+                });
+              }
               editingAddress = null;
               await saveOverrides();
-              loadRaw();
+              computePortfolio();
             }}>Save</button>
             <button type="button" on:click={() => editingAddress=null}>Cancel</button>
           </div>
