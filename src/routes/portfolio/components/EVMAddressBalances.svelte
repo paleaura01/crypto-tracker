@@ -62,15 +62,10 @@
       }
     }
 
-    // restore overrides
-    try {
-      const ra = localStorage.getItem(ADDR_OVR_KEY);
-      if (ra) addressOverrideMap.set(JSON.parse(ra));
-      const rs = localStorage.getItem(SYMBOL_OVR_KEY);
-      if (rs) symbolOverrideMap.set(JSON.parse(rs));
-    } catch {}
+    // Load overrides from JSON files first, then fallback to localStorage
+    await loadOverrides();
 
-    // persist overrides with logging
+    // persist overrides to both localStorage and JSON files
     addressOverrideMap.subscribe(m => {
       console.log('📝 Address overrides updated:', m);
       localStorage.setItem(ADDR_OVR_KEY, JSON.stringify(m));
@@ -83,6 +78,64 @@
     loadRaw();
     ensureCoinList();
   });
+
+  // Load overrides from JSON files
+  async function loadOverrides() {
+    try {
+      // Load symbol overrides
+      try {
+        const symbolRes = await fetch('/src/data/symbol-overrides.json');
+        if (symbolRes.ok) {
+          const symbolOverrides = await symbolRes.json();
+          symbolOverrideMap.set(symbolOverrides);
+          console.log('📋 Loaded symbol overrides from JSON:', symbolOverrides);
+        }
+      } catch (e) {
+        console.log('📋 No symbol overrides JSON found, trying localStorage');
+        const rs = localStorage.getItem(SYMBOL_OVR_KEY);
+        if (rs) symbolOverrideMap.set(JSON.parse(rs));
+      }
+
+      // Load address overrides
+      try {
+        const addressRes = await fetch('/src/data/address-overrides.json');
+        if (addressRes.ok) {
+          const addressOverrides = await addressRes.json();
+          addressOverrideMap.set(addressOverrides);
+          console.log('📋 Loaded address overrides from JSON:', addressOverrides);
+        }
+      } catch (e) {
+        console.log('📋 No address overrides JSON found, trying localStorage');
+        const ra = localStorage.getItem(ADDR_OVR_KEY);
+        if (ra) addressOverrideMap.set(JSON.parse(ra));
+      }
+    } catch (e) {
+      console.error('❌ Failed to load overrides:', e);
+    }
+  }
+
+  // Save overrides to JSON files
+  async function saveOverrides() {
+    try {
+      // Save symbol overrides
+      await fetch('/api/save-symbol-overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(get(symbolOverrideMap))
+      });
+
+      // Save address overrides  
+      await fetch('/api/save-address-overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(get(addressOverrideMap))
+      });
+
+      console.log('✅ Overrides saved to JSON files');
+    } catch (e) {
+      console.error('❌ Failed to save overrides to JSON files:', e);
+    }
+  }
 
   // fetch CoinGecko list once
   async function ensureCoinList() {
@@ -238,7 +291,7 @@
     
     const ZERO   = '0x0000000000000000000000000000000000000000';
     const SENT   = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-    const native = { eth:'ethereum', polygon:'matic-network', bsc:'binancecoin' };
+    const native = { eth:'ethereum', polygon:'polygon-ecosystem-token', bsc:'binancecoin' };
 
     const picks: { token:RawToken; cgId:string }[] = [];
     const seen = new Set<string>();
@@ -333,6 +386,11 @@
 
     console.log('\n📋 Final picks:', picks);
     console.log('📊 Tokens matched:', picks.length);
+    
+    // Log detailed picks for debugging
+    picks.forEach(pick => {
+      console.log(`   🎯 ${pick.token.symbol} (${pick.token.chain}) -> CoinGecko ID: ${pick.cgId}`);
+    });
 
     // fetch prices
     const ids = Array.from(new Set(picks.map(p=>p.cgId)));
@@ -363,7 +421,9 @@
         price: p,
         value: bal * p
       };
-      console.log(`💼 Portfolio item: ${item.symbol} = ${item.balance} × $${item.price} = $${item.value}`);
+      console.log(`💼 Portfolio item: ${item.symbol} (${token.chain}) = ${item.balance} × $${item.price} = $${item.value}`);
+      console.log(`   🔍 CoinGecko ID used: ${cgId}`);
+      console.log(`   🔍 Price data found: ${JSON.stringify((cgResponse as any)[cgId])}`);
       return item;
     });
     
@@ -422,8 +482,9 @@
               editingSymbol = sym;
               editSymbolCgId = get(symbolOverrideMap)[sym] || '';
             }}>Edit</button>
-            <button type="button" on:click={() => {
+            <button type="button" on:click={async () => {
               symbolOverrideMap.update(m => ({ ...m, [sym]: null }));
+              await saveOverrides();
               loadRaw();
             }}>Remove</button>
           </span>
@@ -443,10 +504,11 @@
               class="border p-1 rounded w-full text-sm"
             />
             <div class="flex space-x-2">
-              <button type="button" on:click={() => {
+              <button type="button" on:click={async () => {
                 const id = editSymbolCgId==='__NONE__'?null:editSymbolCgId||null;
                 symbolOverrideMap.update(m => ({ ...m, [sym]: id }));
                 editingSymbol = null;
+                await saveOverrides();
                 loadRaw();
               }} class="bg-blue-500 text-white px-3 py-1 rounded text-sm">Save</button>
               <button type="button" on:click={() => editingSymbol=null} class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Cancel</button>
@@ -471,8 +533,9 @@
               editingAddress = addr;
               editAddressCgId = get(addressOverrideMap)[addr] || '';
             }}>Edit</button>
-            <button type="button" on:click={() => {
+            <button type="button" on:click={async () => {
               addressOverrideMap.update(m => ({ ...m, [addr]: null }));
+              await saveOverrides();
               loadRaw();
             }}>Remove</button>
           </span>
@@ -484,9 +547,10 @@
               placeholder="CoinGecko ID (or blank to remove)"
               class="border p-1 rounded w-full"
             />
-            <button type="button" on:click={() => {
+            <button type="button" on:click={async () => {
               addressOverrideMap.update(m => ({ ...m, [addr]: editAddressCgId||null }));
               editingAddress = null;
+              await saveOverrides();
               loadRaw();
             }}>Save</button>
             <button type="button" on:click={() => editingAddress=null}>Cancel</button>
