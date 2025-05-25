@@ -9,21 +9,21 @@
   const ADDR_OVR_KEY   = 'evmAddressOverrides';
   const SYMBOL_OVR_KEY = 'evmSymbolOverrides';
 
-  // 1) UI state
+  // UI state
   let address = '';
   let loading = false;
   let error   = '';
 
-  // 2) Raw on-chain data
+  // Raw on‐chain data
   type RawToken = {
     symbol:           string;
     balance:          string;
     contract_address: string;
-    chain:            'eth' | 'polygon' | 'bsc';
+    chain:            'eth'|'polygon'|'bsc';
   };
   let rawOnchain: RawToken[] = [];
 
-  // 3) CoinGecko master list
+  // CoinGecko master list
   type CoinListEntry = {
     id:        string;
     symbol:    string;
@@ -32,11 +32,11 @@
   let coinList: CoinListEntry[] = [];
   let rawCoinListErr: string|null = null;
 
-  // 4) Price response
+  // Price response
   type PriceResp = Record<string,{ usd:number }> | { error:string } | null;
   let cgResponse: PriceResp = null;
 
-  // 5) Final portfolio
+  // Final portfolio
   type PortfolioItem = {
     symbol:  string;
     balance: number;
@@ -45,54 +45,47 @@
   };
   let portfolio: PortfolioItem[] = [];
 
-  // 6) Address overrides (contract_address → cgId|null)
+  // Overrides
   const addressOverrideMap = writable<Record<string,string|null>>({});
-  let editingAddress: string|null = null;
-  let editAddressCgId = '';
-  function setAddressOverride(addr: string, id: string|null) {
-    addressOverrideMap.update(m => ({ ...m, [addr]: id }));
-  }
+  const symbolOverrideMap  = writable<Record<string,string|null>>({});
 
-  // 7) Symbol overrides (symbol → cgId|null)
-  const symbolOverrideMap = writable<Record<string,string|null>>({});
+  // Editing UI
   let editingSymbol: string|null = null;
   let editSymbolCgId = '';
-  function setSymbolOverride(sym: string, id: string|null) {
-    symbolOverrideMap.update(m => ({ ...m, [sym]: id }));
-  }
 
-  // ──────────────────────────────────────────────────────────────
-  // onMount: load last address + overrides + coin list
+  let editingAddress: string|null = null;
+  let editAddressCgId = '';
+
+  // onMount: restore from localStorage + initial load
   onMount(() => {
-    // last address
+    const a = localStorage.getItem(ADDR_KEY);
+    if (a) address = a;
+
     try {
-      const a = localStorage.getItem(ADDR_KEY);
-      if (a) {
-        address = a;
-        loadRaw();
-      }
+      const ra = localStorage.getItem(ADDR_OVR_KEY);
+      if (ra) addressOverrideMap.set(JSON.parse(ra));
+      const rs = localStorage.getItem(SYMBOL_OVR_KEY);
+      if (rs) symbolOverrideMap.set(JSON.parse(rs));
     } catch {}
 
-    // address overrides
-    try {
-      const raw = localStorage.getItem(ADDR_OVR_KEY);
-      if (raw) addressOverrideMap.set(JSON.parse(raw));
-    } catch {}
     addressOverrideMap.subscribe(m =>
       localStorage.setItem(ADDR_OVR_KEY, JSON.stringify(m))
     );
-
-    // symbol overrides
-    try {
-      const raw = localStorage.getItem(SYMBOL_OVR_KEY);
-      if (raw) symbolOverrideMap.set(JSON.parse(raw));
-    } catch {}
     symbolOverrideMap.subscribe(m =>
       localStorage.setItem(SYMBOL_OVR_KEY, JSON.stringify(m))
     );
 
-    // coin list
+    // kick off initial load & compute
+    loadRaw();
     ensureCoinList();
+
+    // whenever overrides change, recompute in-place
+    addressOverrideMap.subscribe(() => {
+      if (!loading && rawOnchain.length) computePortfolio();
+    });
+    symbolOverrideMap.subscribe(() => {
+      if (!loading && rawOnchain.length) computePortfolio();
+    });
   });
 
   // fetch CoinGecko master list once
@@ -102,36 +95,32 @@
       const res = await fetch(
         'https://api.coingecko.com/api/v3/coins/list?include_platform=true'
       );
-      if (!res.ok) throw new Error('Failed to load CoinGecko list');
+      if (!res.ok) throw new Error();
       coinList = await res.json();
-    } catch (e:any) {
-      rawCoinListErr = e.message;
-      console.error(e);
+    } catch {
+      rawCoinListErr = 'Failed to load CoinGecko list';
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // STEP 1: fetch raw on-chain balances
+  // STEP 1: load on-chain balances + compute
   async function loadRaw() {
-    if (!address.trim()) {
-      error = 'Enter a wallet address';
-      return;
-    }
-    // persist address
+    if (!address.trim()) { error = 'Enter a wallet address'; return; }
     localStorage.setItem(ADDR_KEY, address);
-
-    loading = true;
-    error   = '';
+    loading    = true;
+    error      = '';
     rawOnchain = [];
     cgResponse = null;
     portfolio  = [];
 
     try {
+      await ensureCoinList();
+
       const res = await fetch(
         `/api/wallet-address/combined-portfolio?address=${encodeURIComponent(address)}`
       );
       if (!res.ok) throw new Error(await res.text());
       rawOnchain = await res.json();
+      await computePortfolio();
     } catch (e:any) {
       console.error(e);
       error = e.message;
@@ -140,107 +129,84 @@
     }
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // STEP 2: compute portfolio whenever rawOnchain or either override map changes
-  $: if (rawOnchain.length && coinList.length) {
-    // force re-run on map changes
-    const _addrOv = $addressOverrideMap;
-    const _symOv  = $symbolOverrideMap;
-    computePortfolio();
-  }
-
+  // STEP 2: apply overrides → native → platform → symbol, then fetch prices
   async function computePortfolio() {
+    await ensureCoinList();
+    if (!rawOnchain.length) return;
+
     const addrOv = get(addressOverrideMap);
     const symOv  = get(symbolOverrideMap);
+    const ZERO   = '0x0000000000000000000000000000000000000000';
+    const SENT   = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    const native = { eth:'ethereum', polygon:'matic-network', bsc:'binancecoin' };
 
-    const ZERO_ADDR    = '0x0000000000000000000000000000000000000000';
-    const SENT_ADDR    = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-    const nativeMap    = { eth:'ethereum', polygon:'matic-network', bsc:'binancecoin' };
-
-    // Phase 1: address overrides
-    const excluded = new Set<string>();
-    const m1 = rawOnchain.flatMap(t => {
-      const a = t.contract_address.toLowerCase();
-      if (a in addrOv) {
-        excluded.add(a);
-        if (addrOv[a]) return [{ token:t, cgId:addrOv[a]! }];
-      }
-      return [];
-    });
-
-    // Phase 2: symbol overrides
-    const m2 = rawOnchain.flatMap(t => {
-      const a = t.contract_address.toLowerCase();
-      const s = t.symbol.toUpperCase();
-      if (!excluded.has(a) && s in symOv) {
-        excluded.add(a);
-        if (symOv[s]) return [{ token:t, cgId:symOv[s]! }];
-      }
-      return [];
-    });
-
-    // Phase 3: native
-    const m3 = rawOnchain.flatMap(t => {
-      const a = t.contract_address.toLowerCase();
-      if (!excluded.has(a) && (a===ZERO_ADDR || a===SENT_ADDR)) {
-        excluded.add(a);
-        return [{ token:t, cgId:nativeMap[t.chain] }];
-      }
-      return [];
-    });
-
-    // Phase 4: platform lookup
-    const m4 = rawOnchain.flatMap(t => {
-      const a = t.contract_address.toLowerCase();
-      if (excluded.has(a)) return [];
-      for (const c of coinList) {
-        if (c.platforms
-         && Object.values(c.platforms).some(p => p?.toLowerCase()===a)
-        ) {
-          excluded.add(a);
-          return [{ token:t, cgId:c.id }];
-        }
-      }
-      return [];
-    });
-
-    // Phase 5: symbol fallback
-    const m5 = rawOnchain.flatMap(t => {
-      const a = t.contract_address.toLowerCase();
-      if (excluded.has(a)) return [];
-      const sym = t.symbol.toUpperCase();
-      return coinList
-        .filter(c => c.symbol.toUpperCase()===sym)
-        .map(c => ({ token:t, cgId:c.id }));
-    });
-
-    // combine + dedupe by address
-    const all = [...m1, ...m2, ...m3, ...m4, ...m5];
+    const picks: { token:RawToken; cgId:string }[] = [];
     const seen = new Set<string>();
-    const uniq = all.filter(({token}) => {
-      const a = token.contract_address.toLowerCase();
-      if (seen.has(a)) return false;
-      seen.add(a);
-      return true;
-    });
 
-    // fetch prices
-    if (uniq.length) {
-      const ids = Array.from(new Set(uniq.map(m=>m.cgId)));
-      try {
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=${ids.join(',')}`
-        );
-        if (!res.ok) throw new Error('Price fetch failed');
-        cgResponse = await res.json();
-      } catch (e:any) {
-        console.error(e);
-        cgResponse = { error:e.message };
+    for (const t of rawOnchain) {
+      const a = t.contract_address.toLowerCase();
+      if (seen.has(a)) continue;
+
+      // 1) address override
+      if (a in addrOv) {
+        seen.add(a);
+        if (addrOv[a]) picks.push({ token:t, cgId:addrOv[a]! });
+        continue;
+      }
+
+      const s = t.symbol.toUpperCase();
+
+      // 2) symbol override
+      if (s in symOv) {
+        seen.add(a);
+        if (symOv[s]) picks.push({ token:t, cgId:symOv[s]! });
+        continue;
+      }
+
+      // 3) native token placeholder
+      if (a === ZERO || a === SENT) {
+        seen.add(a);
+        picks.push({ token:t, cgId:native[t.chain] });
+        continue;
+      }
+
+      // 4) platform scan
+      const plat = coinList.find(c =>
+        c.platforms &&
+        Object.values(c.platforms).some(p => p?.toLowerCase() === a)
+      );
+      if (plat) {
+        seen.add(a);
+        picks.push({ token:t, cgId:plat.id });
+        continue;
+      }
+
+      // 5) symbol fallback
+      const sym = coinList.find(c => c.symbol.toUpperCase() === s);
+      if (sym) {
+        seen.add(a);
+        picks.push({ token:t, cgId:sym.id });
       }
     }
 
-    // build portfolio
-    portfolio = uniq.map(({token, cgId}) => {
+    console.log('picks:', picks);
+
+    // fetch USD prices
+    const ids = Array.from(new Set(picks.map(x => x.cgId)));
+    if (ids.length) {
+      try {
+        const resp = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=${ids.join(',')}`
+        );
+        if (!resp.ok) throw new Error();
+        cgResponse = await resp.json();
+      } catch {
+        cgResponse = { error:'Price fetch failed' };
+      }
+    }
+
+    // build the array for UI
+    portfolio = picks.map(({ token, cgId }) => {
       const bal = Number(token.balance);
       const p   = (cgResponse as any)[cgId]?.usd || 0;
       return {
@@ -254,11 +220,11 @@
 </script>
 
 <style>
-  .scroll { max-height:200px; overflow:auto; background:#fafafa; padding:.5rem; border:1px solid #ddd; }
-  .row    { display:flex; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid #eee; }
+  .scroll  { max-height:200px; overflow:auto; background:#fafafa; padding:.5rem; border:1px solid #ddd; }
+  .row     { display:flex; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid #eee; }
   .row:last-child { border-bottom:none; }
-  .error  { color:#c00; margin-top:.5rem; }
-  .section{ margin-top:1.5rem; }
+  .error   { color:#c00; margin-top:.5rem; }
+  .section { margin-top:1.5rem; }
 </style>
 
 <div class="space-y-6">
@@ -292,17 +258,21 @@
   <div class="section">
     <h3>Manage Symbol Overrides</h3>
     <div class="scroll">
-      {#each Array.from(new Set(rawOnchain.map(t=>t.symbol.toUpperCase()))) as sym}
+      {#each Array.from(new Set(rawOnchain.map(t => t.symbol.toUpperCase()))) as sym}
         <div class="row">
           <span>{sym}</span>
           <span class="space-x-2">
-            <button type="button" on:click={() => {
-              editingSymbol = sym;
-              editSymbolCgId = get(symbolOverrideMap)[sym] ?? '';
-            }}>Edit</button>
-            <button type="button" on:click={() => {
-              setSymbolOverride(sym, null);
-            }}>Remove</button>
+            <button
+              type="button"
+              on:click={() => {
+                editingSymbol = sym;
+                editSymbolCgId = get(symbolOverrideMap)[sym] || '';
+              }}
+            >Edit</button>
+            <button
+              type="button"
+              on:click={() => symbolOverrideMap.update(m => ({ ...m, [sym]: null }))}
+            >Remove</button>
           </span>
         </div>
         {#if editingSymbol === sym}
@@ -310,16 +280,19 @@
             <select bind:value={editSymbolCgId}>
               <option value="">— choose ID —</option>
               <option value="__NONE__">⛔ Exclude</option>
-              {#each coinList.filter(c=>c.symbol.toUpperCase()===sym) as c}
+              {#each coinList.filter(c => c.symbol.toUpperCase() === sym) as c}
                 <option value={c.id}>{c.id}</option>
               {/each}
             </select>
-            <button type="button" on:click={() => {
-              const id = editSymbolCgId==='__NONE__'?null:(editSymbolCgId||null);
-              setSymbolOverride(sym, id);
-              editingSymbol = null;
-            }}>Save</button>
-            <button type="button" on:click={() => editingSymbol = null}>Cancel</button>
+            <button
+              type="button"
+              on:click={() => {
+                const id = editSymbolCgId === '__NONE__' ? null : (editSymbolCgId || null);
+                symbolOverrideMap.update(m => ({ ...m, [sym]: id }));
+                editingSymbol = null;
+              }}
+            >Save</button>
+            <button type="button" on:click={() => (editingSymbol = null)}>Cancel</button>
           </div>
         {/if}
       {/each}
@@ -330,47 +303,65 @@
   <div class="section">
     <h3>Manage Address Overrides</h3>
     <div class="scroll">
-      {#each Array.from(new Set(rawOnchain.map(t=>t.contract_address.toLowerCase()))) as addr}
+      {#each Array.from(new Set(rawOnchain.map(t => t.contract_address.toLowerCase()))) as addr}
         <div class="row">
           <span>
-            {addr} ({rawOnchain.find(t=>t.contract_address.toLowerCase()===addr)?.symbol})
+            {addr} ({rawOnchain.find(t => t.contract_address.toLowerCase() === addr)?.symbol})
           </span>
           <span class="space-x-2">
-            <button type="button" on:click={() => {
-              editingAddress = addr;
-              editAddressCgId = get(addressOverrideMap)[addr] ?? '';
-            }}>Edit</button>
-            <button type="button" on:click={() => {
-              setAddressOverride(addr, null);
-            }}>Remove</button>
+            <button
+              type="button"
+              on:click={() => {
+                editingAddress = addr;
+                editAddressCgId = get(addressOverrideMap)[addr] || '';
+              }}
+            >Edit</button>
+            <button
+              type="button"
+              on:click={() => addressOverrideMap.update(m => ({ ...m, [addr]: null }))}
+            >Remove</button>
           </span>
         </div>
         {#if editingAddress === addr}
           <div class="mt-2">
             <input
-              type="text"
               bind:value={editAddressCgId}
               placeholder="CoinGecko ID (or blank to remove)"
               class="border p-1 rounded w-full"
             />
-            <button type="button" on:click={() => {
-              setAddressOverride(addr, editAddressCgId||null);
-              editingAddress = null;
-            }}>Save</button>
-            <button type="button" on:click={() => editingAddress = null}>Cancel</button>
+            <button
+              type="button"
+              on:click={() => {
+                addressOverrideMap.update(m => ({ ...m, [addr]: editAddressCgId || null }));
+                editingAddress = null;
+              }}
+            >Save</button>
+            <button type="button" on:click={() => (editingAddress = null)}>Cancel</button>
           </div>
         {/if}
       {/each}
     </div>
   </div>
 
-  <!-- Raw JSON for debugging -->
+  <!-- Raw JSON: On-Chain Balances -->
   <div class="section">
     <h3>Raw JSON: On-Chain Balances</h3>
     <pre class="scroll">{JSON.stringify(rawOnchain, null, 2)}</pre>
   </div>
+
+  <!-- Raw JSON: Price Response -->
   <div class="section">
     <h3>Raw JSON: Price Response</h3>
     <pre class="scroll">{JSON.stringify(cgResponse, null, 2)}</pre>
+  </div>
+
+  <!-- Raw JSON: CoinGecko List -->
+  <div class="section">
+    <h3>Raw JSON: CoinGecko List</h3>
+    {#if rawCoinListErr}
+      <p class="error">{rawCoinListErr}</p>
+    {:else}
+      <pre class="scroll">{JSON.stringify(coinList, null, 2)}</pre>
+    {/if}
   </div>
 </div>
