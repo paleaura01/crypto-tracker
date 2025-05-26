@@ -2,13 +2,11 @@
 	"name": "crypto-tracker",
 	"private": false,
 	"version": "0.0.1",
-	"type": "module",
-	"scripts": {
+	"type": "module",	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
-		"postinstall": "node scripts/apply-cdp-sdk-patch.cjs"
+		"prepare": "svelte-kit sync || echo ''"
 	},
 	"overrides": {
 		"rollup-plugin-inject": "@rollup/plugin-inject",
@@ -36,10 +34,7 @@
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.32.1",
 		"vite": "^6.0.0"
-	},
-	"dependencies": {
-		"@coinbase/agentkit": "^0.7.2",
-		"@coinbase/agentkit-model-context-protocol": "^0.2.0",
+	},	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.12.0",
 		"@quicknode/sdk": "^2.4.2",
 		"@solana/pay": "^0.2.5",
