@@ -10,7 +10,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@executeautomation/playwright-mcp-server"
+        "@modelcontextprotocol/server-playwright@latest"
       ]
     },
     "windows-cli": {
