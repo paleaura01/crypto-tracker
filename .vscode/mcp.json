@@ -1,23 +1,19 @@
 {
   "servers": {
-    "desktop-screenshot": {
-      "command": "node",
-      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\desktop-screenshot-mcp.js"]
-    },
     "sequential-thinking": {
       "command": "npx",
       "args": [
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
       ]
-    },
-    "playwright": {
+    },    "playwright": {
       "command": "npx",
       "args": [
         "-y",
         "@executeautomation/playwright-mcp-server"
       ]
-    },    "windows-cli": {
+    },
+    "windows-cli": {
       "command": "npx",
       "args": ["-y", "@simonb97/server-win-cli"]
     },
@@ -41,22 +37,7 @@
         "sbp_c2b0d43c77c535a225df7a10322805612843bc74"
       ]
     },
-    "cryptopanic": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "d:\\Github\\crypto-tracker\\mcp-servers\\cryptopanic-mcp-server",
-        "run",
-        "main.py"
-      ],
-      "env": {
-        "CRYPTOPANIC_API_KEY": "4e52d7747b84b79651b23ed424f6ffdce627bea4"
-      }
-    },
-    "coinbase-agentkit": {
-      "command": "node",
-      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\coinbase-agentkit-mcp.js"]
-    },    "fetch": {
+    "fetch": {
       "command": "node",
       "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\fetch-mcp\\dist\\index.js"]
     },    "solver": {
@@ -67,10 +48,23 @@
         "run",
         "mcp-solver-z3"
       ]
-    },
-    "browser-tools": {
+    },    "debug-shell": {
       "command": "node",
-      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\browser-tools-mcp\\browser-tools-mcp\\dist\\mcp-server.js"]
+      "args": [
+        "d:\\Github\\crypto-tracker\\mcp-servers\\debug-shell-mcp.js"
+      ]
+    },    "filesystem": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/modelcontextprotocol/servers.git#subdirectory=src/filesystem",
+        "mcp-server-filesystem",
+        "d:\\Github\\crypto-tracker"
+      ]    },    "time": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-time"
+      ]
     }
   }
 }
