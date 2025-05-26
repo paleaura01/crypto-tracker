@@ -1,0 +1,50 @@
+{
+  "servers": {
+    "desktop-screenshot": {
+      "command": "node",
+      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\desktop-screenshot-mcp.js"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    },    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${workspaceFolder}"
+      ]
+    },    "basic-memory": {
+      "command": "uvx",
+      "args": [
+        "basic-memory",
+        "--project",
+        "crypto-tracker",
+        "mcp"
+      ]
+    },"supabase": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "sbp_c2b0d43c77c535a225df7a10322805612843bc74"
+      ]
+    },    "coinbase-agentkit": {
+      "command": "node",
+      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\coinbase-agentkit-mcp.js"]
+    }
+  }
+}

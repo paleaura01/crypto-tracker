@@ -1,21 +1,21 @@
 import { json } from '@sveltejs/kit';
-import fs from 'fs';
-import path from 'path';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
 
 export async function POST({ request }) {
   try {
     const data = await request.json();
-    const filePath = path.join(process.cwd(), 'src', 'data', 'coingecko-list.json');
+    
+    // Save to static/data directory (static files don't trigger hot reload)
+    const filePath = join(process.cwd(), 'static', 'data', 'coingecko-list.json');
     
     // Ensure directory exists
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    await mkdir(join(process.cwd(), 'static', 'data'), { recursive: true });
 
     // Write to file
-    fs.writeFileSync(filePath, JSON.stringify(data));
+    await writeFile(filePath, JSON.stringify(data, null, 2));
     
+    console.log('✅ CoinGecko list saved to:', filePath);
     return json({ success: true });
   } catch (error) {
     console.error('Error saving CoinGecko list:', error);

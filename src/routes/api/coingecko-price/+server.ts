@@ -59,7 +59,7 @@ export async function POST({ request }) {
   const merged = Object.assign({}, ...maps);
 
   // Persist for debugging
-  const outDir  = path.resolve('src/data');
+  const outDir  = path.resolve('static/data');
   const outFile = path.join(outDir, `coingecko_token_prices.json`);
   await fs.mkdir(outDir, { recursive: true });
   await fs.writeFile(outFile, JSON.stringify(merged, null, 2), 'utf8');

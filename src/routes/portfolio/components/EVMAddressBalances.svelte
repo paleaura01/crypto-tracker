@@ -30,9 +30,64 @@
   type PortfolioItem = { symbol:string; balance:number; price:number; value:number };
   let portfolio: PortfolioItem[] = [];
 
+  // Simple lightweight debug streaming - only logs critical save events
+  async function streamDebugEvent(type: string, message: string) {
+    if (typeof window === 'undefined') return; // Skip during SSR
+    
+    // Only log truly critical events to avoid noise
+    if (!['SAVE_START', 'SAVE_COMPLETE', 'SAVE_ERROR', 'REFRESH_DETECTED'].includes(type)) {
+      return;
+    }
+    
+    try {
+      // Simple one-line streaming - no memory accumulation
+      await fetch('/api/debug-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: {
+            timestamp: new Date().toISOString(),
+            type,
+            message
+          }
+        })
+      });
+    } catch (e) {
+      // Fail silently to avoid breaking the app
+    }
+  }
+  
+  // Simple page refresh detection - lightweight approach
+  function setupSimpleRefreshDetection() {
+    if (typeof window === 'undefined') return;
+    
+    window.addEventListener('beforeunload', () => {
+      streamDebugEvent('REFRESH_DETECTED', 'Page unload detected');
+    });
+    
+    return {
+      markSaveStart: () => {
+        streamDebugEvent('SAVE_START', 'Save operation starting');
+      },
+      markSaveEnd: (error?: any) => {
+        if (error) {
+          streamDebugEvent('SAVE_ERROR', `Save failed: ${error.message}`);
+        } else {
+          streamDebugEvent('SAVE_COMPLETE', 'Save operation completed');
+        }
+      }
+    };
+  }
+  
+  // Initialize simple refresh detection
+  let refreshDetector: ReturnType<typeof setupSimpleRefreshDetection> | null = null;
+
   // Overrides stores
   const addressOverrideMap = writable<Record<string,string|null>>({});
   const symbolOverrideMap  = writable<Record<string,string|null>>({});
+
+  // Advanced refresh detection helpers
+  let refreshDetection: any = null;
 
   // For the “edit” UI
   let editingSymbol: string|null = null;
@@ -42,6 +97,9 @@
   let editAddressCgId = '';
 
   onMount(async () => {
+    // Set up simple refresh detection (lightweight)
+    refreshDetector = setupSimpleRefreshDetection();
+    
     // restore last address
     const a = localStorage.getItem(ADDR_KEY);
     if (a) address = a;
@@ -49,7 +107,7 @@
     // Auto-load test wallet address if no address set
     if (!address) {
       try {
-        const testDataRes = await fetch('/src/data/test-wallet-data.json');
+        const testDataRes = await fetch('/data/test-wallet-data.json');
         if (testDataRes.ok) {
           const testData = await testDataRes.json();
           if (testData.testWalletAddress) {
@@ -77,6 +135,8 @@
 
     loadRaw();
     ensureCoinList();
+    
+    console.log('✅ EVMAddressBalances onMount completed');
   });
 
   // Load overrides from JSON files
@@ -84,7 +144,7 @@
     try {
       // Load symbol overrides
       try {
-        const symbolRes = await fetch('/src/data/symbol-overrides.json');
+        const symbolRes = await fetch('/data/symbol-overrides.json');
         if (symbolRes.ok) {
           const symbolOverrides = await symbolRes.json();
           symbolOverrideMap.set(symbolOverrides);
@@ -98,7 +158,7 @@
 
       // Load address overrides
       try {
-        const addressRes = await fetch('/src/data/address-overrides.json');
+        const addressRes = await fetch('/data/address-overrides.json');
         if (addressRes.ok) {
           const addressOverrides = await addressRes.json();
           addressOverrideMap.set(addressOverrides);
@@ -114,26 +174,54 @@
     }
   }
 
-  // Save overrides to JSON files
+  // Save overrides to JSON files (only in production) or memory (in development)
   async function saveOverrides() {
+    // Mark save start for monitoring
+    if (refreshDetector?.markSaveStart) {
+      refreshDetector.markSaveStart();
+    }
+    
+    streamDebugEvent('SAVE_START', 'Starting to save overrides');
+    
     try {
-      // Save symbol overrides
-      await fetch('/api/save-symbol-overrides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(get(symbolOverrideMap))
-      });
+      // In development mode, skip file writing to avoid triggering hot reloads
+      const isDev = import.meta.env.DEV;
+      
+      if (isDev) {
+        // Development mode: just update localStorage and skip file writing
+        streamDebugEvent('SAVE_COMPLETE', 'Overrides saved to localStorage (dev mode)');
+        console.log('🚀 DEV MODE: Skipping file writes to prevent page refresh');
+      } else {
+        // Production mode: save to files
+        const symbolResponse = await fetch('/api/save-symbol-overrides', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(get(symbolOverrideMap))
+        });
 
-      // Save address overrides  
-      await fetch('/api/save-address-overrides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(get(addressOverrideMap))
-      });
+        const addressResponse = await fetch('/api/save-address-overrides', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(get(addressOverrideMap))
+        });
 
-      console.log('✅ Overrides saved to JSON files');
+        streamDebugEvent('SAVE_COMPLETE', `Overrides saved to files - Symbol: ${symbolResponse.status}, Address: ${addressResponse.status}`);
+      }
+      
+      // Mark save end for monitoring
+      if (refreshDetector?.markSaveEnd) {
+        refreshDetector.markSaveEnd();
+      }
+      
     } catch (e) {
-      console.error('❌ Failed to save overrides to JSON files:', e);
+      streamDebugEvent('SAVE_ERROR', `Failed to save overrides: ${e instanceof Error ? e.message : String(e)}`);
+      
+      // Mark save end with error for monitoring
+      if (refreshDetector?.markSaveEnd) {
+        refreshDetector.markSaveEnd(e);
+      }
+      
+      throw e; // Re-throw the error
     }
   }
 
@@ -142,7 +230,7 @@
     if (coinList.length || rawCoinListErr) return;
     try {
       // Try to load from cache first
-      const cacheRes = await fetch('/src/data/coingecko-list.json');
+      const cacheRes = await fetch('/data/coingecko-list.json');
       if (cacheRes.ok) {
         coinList = await cacheRes.json();
         console.log('📋 Loaded cached CoinGecko list:', coinList.length, 'coins');
@@ -210,7 +298,7 @@
       await ensureCoinList();
 
       // Try to load from cache first
-      const cacheFile = `/src/data/wallet-balances-${address.toLowerCase()}.json`;
+      const cacheFile = `/data/wallet-balances-${address.toLowerCase()}.json`;
       try {
         const cacheRes = await fetch(cacheFile);
         if (cacheRes.ok) {
@@ -447,6 +535,98 @@
     
     console.log('🎯 Final portfolio:', portfolio);
   }
+
+  // Lightweight function to recompute portfolio when only overrides change
+  function updatePortfolioForOverrides() {
+    if (!rawOnchain.length || !coinList.length) {
+      console.log('❌ Cannot update portfolio - missing data');
+      return;
+    }
+
+    console.log('🔄 Updating portfolio for override changes...');
+    
+    const addrOv = get(addressOverrideMap);
+    const symOv  = get(symbolOverrideMap);
+    
+    const ZERO   = '0x0000000000000000000000000000000000000000';
+    const SENT   = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    const native = { eth:'ethereum', polygon:'polygon-ecosystem-token', bsc:'binancecoin' };
+
+    const picks: { token:RawToken; cgId:string }[] = [];
+    const seen = new Set<string>();
+
+    for (const t of rawOnchain) {
+      const a = t.contract_address.toLowerCase();
+      const s = t.symbol.toUpperCase();
+      const chainKey = `${a}-${t.chain}`;
+      
+      if (seen.has(chainKey)) continue;
+
+      // Same matching logic as computePortfolio but without async calls
+      if (a in addrOv) {
+        seen.add(chainKey);
+        if (addrOv[a]) {
+          picks.push({ token:t, cgId:addrOv[a]! });
+        }
+        continue;
+      }
+
+      if (s in symOv) {
+        seen.add(chainKey);
+        if (symOv[s]) {
+          picks.push({ token:t, cgId:symOv[s]! });
+        }
+        continue;
+      }
+
+      if (a === ZERO || a === SENT) {
+        seen.add(chainKey);
+        picks.push({ token:t, cgId:native[t.chain] });
+        continue;
+      }
+
+      const platformMap = { eth: 'ethereum', polygon: 'polygon-pos', bsc: 'binance-smart-chain' };
+      const platformKey = platformMap[t.chain];
+      
+      const plat = coinList.find(c =>
+        c.platforms && c.platforms[platformKey]?.toLowerCase() === a
+      );
+      if (plat) {
+        seen.add(chainKey);
+        picks.push({ token:t, cgId:plat.id });
+        continue;
+      }
+      
+      const platFallback = coinList.find(c =>
+        c.platforms && Object.values(c.platforms).some(p=>p?.toLowerCase()===a)
+      );
+      if (platFallback) {
+        seen.add(chainKey);
+        picks.push({ token:t, cgId:platFallback.id });
+        continue;
+      }
+
+      const sym = coinList.find(c => c.symbol.toUpperCase() === s);
+      if (sym) {
+        seen.add(chainKey);
+        picks.push({ token:t, cgId:sym.id });
+      }
+    }
+
+    // Update portfolio using existing price data
+    portfolio = picks.map(({ token, cgId }) => {
+      const bal = +token.balance;
+      const p   = (cgResponse as any)?.[cgId]?.usd || 0;
+      return {
+        symbol: token.symbol.toUpperCase(),
+        balance: bal,
+        price: p,
+        value: bal * p
+      };
+    });
+    
+    console.log('✅ Portfolio updated for overrides:', portfolio.length, 'items');
+  }
 </script>
 
 <style>
@@ -507,7 +687,7 @@
                 return newMap;
               });
               await saveOverrides();
-              computePortfolio();
+              updatePortfolioForOverrides();
             }}>Remove</button>
           </span>
         </div>
@@ -541,13 +721,13 @@
                   });
                   editingSymbol = null;
                   await saveOverrides();
-                  computePortfolio();
+                  updatePortfolioForOverrides();
                   return;
                 }
                 symbolOverrideMap.update(m => ({ ...m, [sym]: id }));
                 editingSymbol = null;
                 await saveOverrides();
-                computePortfolio();
+                updatePortfolioForOverrides();
               }} class="bg-blue-500 text-white px-3 py-1 rounded text-sm">Save</button>
               <button type="button" on:click={() => editingSymbol=null} class="bg-gray-500 text-white px-3 py-1 rounded text-sm">Cancel</button>
             </div>
@@ -578,7 +758,7 @@
                 return newMap;
               });
               await saveOverrides();
-              computePortfolio();
+              updatePortfolioForOverrides();
             }}>Remove</button>
           </span>
         </div>
@@ -602,7 +782,7 @@
               }
               editingAddress = null;
               await saveOverrides();
-              computePortfolio();
+              updatePortfolioForOverrides();
             }}>Save</button>
             <button type="button" on:click={() => editingAddress=null}>Cancel</button>
           </div>
@@ -636,5 +816,14 @@
       <p class="error">{rawCoinListErr}</p>
     {/if}
     <pre class="scroll">{JSON.stringify(coinList, null, 2)}</pre>
+  </div>
+
+  <!-- Debug Info -->
+  <div class="section">
+    <h3>Debug Information</h3>
+    <p class="text-sm text-gray-600">
+      💡 Debug events are now streamed to <code>static/data/debug-stream.log</code> for real-time monitoring.
+      Critical save operations and refresh detection events are logged there.
+    </p>
   </div>
 </div>

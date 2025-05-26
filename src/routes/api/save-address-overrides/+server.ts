@@ -2,12 +2,11 @@ import { json } from '@sveltejs/kit';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
-export async function POST({ request }) {
-  try {
+export async function POST({ request }) {  try {
     const overrides = await request.json();
     
-    // Save to src/data/address-overrides.json
-    const filePath = join(process.cwd(), 'src', 'data', 'address-overrides.json');
+    // Save to static/data/address-overrides.json (static files don't trigger hot reload)
+    const filePath = join(process.cwd(), 'static', 'data', 'address-overrides.json');
     await writeFile(filePath, JSON.stringify(overrides, null, 2));
     
     console.log('✅ Address overrides saved to:', filePath);
