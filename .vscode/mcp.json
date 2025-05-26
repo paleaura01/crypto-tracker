@@ -67,6 +67,10 @@
         "run",
         "mcp-solver-z3"
       ]
+    },
+    "browser-tools": {
+      "command": "node",
+      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\browser-tools-mcp\\browser-tools-mcp\\dist\\mcp-server.js"]
     }
   }
 }
