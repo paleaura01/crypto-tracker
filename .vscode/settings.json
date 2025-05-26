@@ -4,6 +4,18 @@
   "less.lint.unknownAtRules": "ignore",
   "chat.mcp.enabled": true,
   "mcp.servers": {
+    "debug-shell": {
+      // For running shell commands and debugging
+      "command": "node",
+      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\debug-shell-mcp.js"],
+      "cwd": "d:\\Github\\crypto-tracker"
+    },
+    "brave-puppeteer": {
+      // For automating Brave browser - likely for web scraping crypto data
+      "command": "node",
+      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\brave-puppeteer-mcp.js"],
+      "cwd": "d:\\Github\\crypto-tracker"
+    },
     "desktop-screenshot": {
       // For taking programmatic screenshots
       "command": "node",

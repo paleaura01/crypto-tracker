@@ -30,8 +30,8 @@ const execAsync = promisify(exec);
 const CONFIG = {
   devServerUrl: 'http://localhost:5176/test-evm',
   bravePath: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
-  screenshotDir: 'd:/Github/crypto-tracker/static/data/screenshots/',
-  powershellScript: 'd:/Github/crypto-tracker/mcp-scripts/take-screenshot.ps1',
+  screenshotDir: 'd:/Github/crypto-tracker/static/data/',
+  powershellScript: 'd:/Github/crypto-tracker/take-screenshot.ps1',
   rightMonitor: {
     x: 1920,
     y: 0,

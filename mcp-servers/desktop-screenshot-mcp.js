@@ -47,9 +47,9 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 
   try {    if (req.name === 'capture_desktop') {
       const filename = req.arguments?.filename || 'desktop-screenshot';
-      const outputPath = path.join('d:', 'Github', 'crypto-tracker', 'static', 'data', 'screenshots', `${filename}.png`);
-      // Use the PowerShell script file instead of inline command
-      const scriptPath = path.join('d:', 'Github', 'crypto-tracker', 'mcp-scripts', 'take-screenshot.ps1');
+      const outputPath = path.join('d:', 'Github', 'crypto-tracker', 'static', 'data', `${filename}.png`);
+        // Use the PowerShell script file instead of inline command
+      const scriptPath = path.join('d:', 'Github', 'crypto-tracker', 'take-screenshot.ps1');
       const command = `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -filename "${filename}"`;
 
       console.error(`Executing command: ${command}`);

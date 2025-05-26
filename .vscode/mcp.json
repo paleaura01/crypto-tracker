@@ -11,20 +11,17 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ]
     },
-    "puppeteer": {
+    "playwright": {
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-puppeteer"
+        "@executeautomation/playwright-mcp-server"
       ]
-    },    "filesystem": {
+    },    "windows-cli": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "${workspaceFolder}"
-      ]
-    },    "basic-memory": {
+      "args": ["-y", "@simonb97/server-win-cli"]
+    },
+    "basic-memory": {
       "command": "uvx",
       "args": [
         "basic-memory",
@@ -32,7 +29,8 @@
         "crypto-tracker",
         "mcp"
       ]
-    },"supabase": {
+    },
+    "supabase": {
       "command": "cmd",
       "args": [
         "/c",
@@ -42,9 +40,33 @@
         "--access-token",
         "sbp_c2b0d43c77c535a225df7a10322805612843bc74"
       ]
-    },    "coinbase-agentkit": {
+    },
+    "cryptopanic": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "d:\\Github\\crypto-tracker\\mcp-servers\\cryptopanic-mcp-server",
+        "run",
+        "main.py"
+      ],
+      "env": {
+        "CRYPTOPANIC_API_KEY": "4e52d7747b84b79651b23ed424f6ffdce627bea4"
+      }
+    },
+    "coinbase-agentkit": {
       "command": "node",
       "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\coinbase-agentkit-mcp.js"]
+    },    "fetch": {
+      "command": "node",
+      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\fetch-mcp\\dist\\index.js"]
+    },    "solver": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "d:\\Github\\crypto-tracker\\mcp-servers\\mcp-solver",
+        "run",
+        "mcp-solver-z3"
+      ]
     }
   }
 }
