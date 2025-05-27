@@ -1,17 +1,6 @@
-services:
-  # MCP Inspector for debugging and monitoring MCP servers
-  mcp-inspector:
-    build:
-      context: .
-      dockerfile: Dockerfile.mcp-inspector
-    container_name: crypto_tracker_mcp_inspector
-    ports:
-      - "3001:3001"  # MCP Inspector web interface
-    volumes:
-      - ./mcp-servers:/workspace/mcp-servers:ro
-      - ./.vscode/mcp.json:/workspace/.vscode/mcp.json:ro
-    working_dir: /workspace
-    environment:
-      - NODE_ENV=development
-      - MCP_CONFIG_PATH=/workspace/.vscode/mcp.json
-    restart: unless-stopped
+# No services defined - MCP Inspector now runs directly via npm script
+# Use: npm run mcp:inspector to start MCP Inspector
+# This eliminates Docker vulnerabilities and simplifies the setup
+
+# Future services can be added here as needed
+services: {}
