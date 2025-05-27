@@ -14,7 +14,7 @@
         "@modelcontextprotocol/server-playwright@latest"
       ]
     },
-    "windows-cli": {
+    "win-cli": {
       "command": "npx",
       "args": ["-y", "@simonb97/server-win-cli"]
     },
@@ -41,7 +41,8 @@
     "fetch": {
       "command": "node",
       "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\fetch-mcp\\dist\\index.js"]
-    },    "solver": {
+    },
+    "solver": {
       "command": "uv",
       "args": [
         "--directory",
@@ -49,22 +50,27 @@
         "run",
         "mcp-solver-z3"
       ]
-    },    "debug-shell": {
+    },
+    "debug-shell": {
       "command": "node",
       "args": [
         "d:\\Github\\crypto-tracker\\mcp-servers\\debug-shell-mcp.js"
       ]
-    },    "filesystem": {
+    },
+    "filesystem": {
       "command": "uvx",
       "args": [
         "--from",
         "git+https://github.com/modelcontextprotocol/servers.git#subdirectory=src/filesystem",
         "mcp-server-filesystem",
         "d:\\Github\\crypto-tracker"
-      ]    },    "time": {
+      ]
+    },
+    "time": {
       "command": "uvx",
       "args": [
         "mcp-server-time"
-      ]    }
+      ]
+    }
   }
 }

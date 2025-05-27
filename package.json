@@ -9,7 +9,11 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"test:mcp": "node scripts/test-mcp-client.mjs",
-		"test:mcp:vercel": "node scripts/test-mcp-client.mjs https://your-app-name.vercel.app/api/mcp"
+		"test:mcp:vercel": "node scripts/test-mcp-client.mjs https://your-app-name.vercel.app/api/mcp",
+		"mcp:health": "powershell -ExecutionPolicy Bypass -File scripts/mcp-health-check.ps1",
+		"mcp:inspector": "docker-compose up -d mcp-inspector",
+		"dev:mcp": "powershell -ExecutionPolicy Bypass -File scripts/dev-with-mcp.ps1",
+		"mcp:setup": "powershell -ExecutionPolicy Bypass -File scripts/setup-mcp-vercel.ps1"
 	},
 	"overrides": {
 		"rollup-plugin-inject": "@rollup/plugin-inject",
@@ -41,6 +45,7 @@
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.12.0",
 		"@quicknode/sdk": "^2.4.2",
+		"@simonb97/server-win-cli": "^0.2.0",
 		"@solana/pay": "^0.2.5",
 		"@solana/spl-token": "^0.4.0",
 		"@solana/web3.js": "^1.98.2",

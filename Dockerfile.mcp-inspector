@@ -1,4 +1,4 @@
-# Multi-stage build for better security - use Ubuntu LTS for fewer vulnerabilities
+# Multi-stage build for MCP Inspector with crypto-tracker MCP servers
 FROM ubuntu:22.04.5 AS builder
 
 # Install Node.js, Python, and security updates
@@ -22,26 +22,32 @@ RUN apt-get update && \
 RUN pip3 install --no-cache-dir --break-system-packages uv && \
     npm install -g @modelcontextprotocol/inspector
 
-# Production stage - use distroless for better security
-FROM gcr.io/distroless/nodejs20-debian11 AS production
+# Production stage
+FROM node:20-slim AS production
 
-# Copy Python runtime and installed packages from builder
+# Copy Python runtime and tools from builder
 COPY --from=builder /usr/bin/python3 /usr/bin/python3
-COPY --from=builder /usr/lib/python3.* /usr/lib/python3.9/
-COPY --from=builder /usr/local/lib/python3.*/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/lib/python3.* /usr/lib/python3.10/
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
-COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
-COPY --from=builder /usr/local/bin/npx /usr/local/bin/npx
+COPY --from=builder /usr/local/lib/node_modules/@modelcontextprotocol /usr/local/lib/node_modules/@modelcontextprotocol
+COPY --from=builder /usr/local/bin/mcp-inspector /usr/local/bin/mcp-inspector
 
-# Copy the MCP servers from local project
+# Install additional Node.js dependencies
+RUN npm install -g @modelcontextprotocol/inspector
+
+# Copy the MCP servers and configuration
 COPY mcp-servers/ /workspace/mcp-servers/
 COPY scripts/ /workspace/scripts/
+COPY .vscode/mcp.json /workspace/.vscode/mcp.json
 
 # Set working directory
 WORKDIR /workspace
 
-# Default command
-CMD ["npx", "@modelcontextprotocol/inspector", "uv", "run", "--directory", "mcp-servers/mcp-redis", "src/main.py"]
+# Expose MCP inspector port
+EXPOSE 3001
+
+# Start MCP Inspector with crypto-tracker configuration
+CMD ["mcp-inspector", "--config", "/workspace/.vscode/mcp.json", "--port", "3001"]
 
 # Security Notice: This Dockerfile now uses Ubuntu LTS + Distroless for better security.
 # For production use:

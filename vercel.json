@@ -2,8 +2,105 @@
   "framework": "svelte",
   "buildCommand": "npm run build",
   "outputDirectory": "build",
+  "mcp": {
+    "enabled": true,
+    "servers": [
+      {
+        "name": "sequential-thinking",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+        "env": {
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "name": "playwright",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-playwright@latest"],
+        "env": {
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "name": "basic-memory",
+        "command": "uvx",
+        "args": ["basic-memory", "--project", "crypto-tracker", "mcp"],
+        "env": {
+          "PROJECT_NAME": "crypto-tracker"
+        }
+      },
+      {
+        "name": "fetch",
+        "command": "node",
+        "args": ["./mcp-servers/fetch-mcp/dist/index.js"],
+        "env": {
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "name": "solver",
+        "command": "uv",
+        "args": ["--directory", "./mcp-servers/mcp-solver", "run", "mcp-solver-z3"],
+        "env": {
+          "PYTHON_ENV": "production"
+        }
+      },
+      {
+        "name": "filesystem",
+        "command": "uvx",
+        "args": [
+          "--from",
+          "git+https://github.com/modelcontextprotocol/servers.git#subdirectory=src/filesystem",
+          "mcp-server-filesystem",
+          "."
+        ],        "env": {
+          "ALLOWED_DIRECTORIES": "/tmp,/var/data"
+        }
+      },
+      {
+        "name": "time",
+        "command": "uvx",
+        "args": ["mcp-server-time"],
+        "env": {
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "name": "win-cli",
+        "command": "npx",
+        "args": ["-y", "@simonb97/server-win-cli"],
+        "env": {
+          "NODE_ENV": "production"
+        }
+      },
+      {
+        "name": "supabase",
+        "command": "npx",
+        "args": ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "$SUPABASE_ACCESS_TOKEN"],
+        "env": {
+          "NODE_ENV": "production"
+        }
+      }
+    ],
+    "transport": {
+      "type": "stdio",
+      "timeout": 30000
+    },
+    "security": {
+      "allowedOrigins": [
+        "https://crypto-tracker-git-master-paleaura01s-projects.vercel.app",
+        "https://www.crypto-tracker.space"
+      ],
+      "apiKeyRequired": false
+    }
+  },
   "functions": {
     "src/routes/api/mcp/[transport]/+server.ts": {
       "maxDuration": 800
-    }  }
+    }
+  },
+  "env": {
+    "MCP_SERVER_TIMEOUT": "30000",
+    "MCP_MAX_CONNECTIONS": "100"
+  }
 }
