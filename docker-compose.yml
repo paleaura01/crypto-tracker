@@ -1,0 +1,17 @@
+services:
+  # Simplified setup - just the main crypto-tracker app
+  # No Redis or SQLite - using Supabase as single source of truth
+  
+  app:
+    build: .
+    container_name: crypto_tracker_app
+    ports:
+      - "5173:5173"  # Vite dev server
+      - "4173:4173"  # Vite preview
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+    working_dir: /workspace
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped

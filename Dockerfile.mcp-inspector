@@ -1,0 +1,52 @@
+# Multi-stage build for better security - use Ubuntu LTS for fewer vulnerabilities
+FROM ubuntu:22.04.5 AS builder
+
+# Install Node.js, Python, and security updates
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        gnupg \
+        lsb-release \
+        python3 \
+        python3-pip \
+        python3-venv \
+        && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install uv and MCP Inspector
+RUN pip3 install --no-cache-dir --break-system-packages uv && \
+    npm install -g @modelcontextprotocol/inspector
+
+# Production stage - use distroless for better security
+FROM gcr.io/distroless/nodejs20-debian11 AS production
+
+# Copy Python runtime and installed packages from builder
+COPY --from=builder /usr/bin/python3 /usr/bin/python3
+COPY --from=builder /usr/lib/python3.* /usr/lib/python3.9/
+COPY --from=builder /usr/local/lib/python3.*/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=builder /usr/local/bin/npx /usr/local/bin/npx
+
+# Copy the MCP servers from local project
+COPY mcp-servers/ /workspace/mcp-servers/
+COPY scripts/ /workspace/scripts/
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command
+CMD ["npx", "@modelcontextprotocol/inspector", "uv", "run", "--directory", "mcp-servers/mcp-redis", "src/main.py"]
+
+# Security Notice: This Dockerfile now uses Ubuntu LTS + Distroless for better security.
+# For production use:
+# 1. Run security scans (trivy, snyk) regularly
+# 2. Update base images frequently  
+# 3. Use docker-compose.yml for development (with volume mounting)
+# 4. Use this Dockerfile for production deployments
+# 5. Implement image signing and security policies

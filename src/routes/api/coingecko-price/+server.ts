@@ -23,7 +23,9 @@ const PLATFORM: Record<string, string> = {
   optimism: 'optimism'
 };
 
-export async function POST({ request }) {
+import type { RequestHandler } from './$types';
+
+export const POST: RequestHandler = async ({ request }) => {
   // 1) Safely parse & validate tokens[]
   const body = (await request.json()) as TokenPayload;
   const arr = Array.isArray(body.tokens) ? body.tokens : [];

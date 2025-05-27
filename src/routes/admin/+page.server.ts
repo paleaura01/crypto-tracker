@@ -35,7 +35,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     ? allUsers
         .filter((u) => u.email !== session.user.email)
         .map((u) => {
-          const payment = paymentData.find((p) => p.user_id === u.id) || {};
+          const payment = (paymentData || []).find((p) => p.user_id === u.id) || {};
           return {
             user_id: u.id,
             email: u.email,

@@ -2,11 +2,14 @@
 	"name": "crypto-tracker",
 	"private": false,
 	"version": "0.0.1",
-	"type": "module",	"scripts": {
+	"type": "module",
+	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''"
+		"prepare": "svelte-kit sync || echo ''",
+		"test:mcp": "node scripts/test-mcp-client.mjs",
+		"test:mcp:vercel": "node scripts/test-mcp-client.mjs https://your-app-name.vercel.app/api/mcp"
 	},
 	"overrides": {
 		"rollup-plugin-inject": "@rollup/plugin-inject",
@@ -34,21 +37,26 @@
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.32.1",
 		"vite": "^6.0.0"
-	},	"dependencies": {
+	},
+	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.12.0",
 		"@quicknode/sdk": "^2.4.2",
 		"@solana/pay": "^0.2.5",
 		"@solana/spl-token": "^0.4.0",
 		"@solana/web3.js": "^1.98.2",
 		"@supabase/supabase-js": "^2.49.4",
+		"@types/better-sqlite3": "^7.6.13",
 		"@vercel/mcp-adapter": "^0.6.2",
+		"alchemy-sdk": "^3.5.10",
 		"axios": "^1.9.0",
+		"better-sqlite3": "^11.10.0",
 		"dotenv": "^16.5.0",
 		"encoding": "^0.1.13",
 		"graphql": "^16.11.0",
 		"jose": "^6.0.11",
 		"node-fetch": "^3.3.2",
 		"puppeteer": "^24.9.0",
-		"tweetnacl": "^1.0.3"
+		"tweetnacl": "^1.0.3",
+		"zod": "^3.25.28"
 	}
 }

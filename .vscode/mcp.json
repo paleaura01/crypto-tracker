@@ -6,7 +6,8 @@
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
       ]
-    },    "playwright": {
+    },
+    "playwright": {
       "command": "npx",
       "args": [
         "-y",
@@ -64,15 +65,6 @@
       "command": "uvx",
       "args": [
         "mcp-server-time"
-      ]
-    },
-    "sqlite": {
-      "command": "uvx",
-      "args": [
-        "mcp-server-sqlite",
-        "--db-path",
-        "d:\\Github\\crypto-tracker\\static\\data\\crypto-tracker.db"
-      ]
-    }
+      ]    }
   }
 }

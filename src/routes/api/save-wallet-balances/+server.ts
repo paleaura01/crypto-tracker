@@ -1,8 +1,9 @@
 import { json } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
-export async function POST({ request }) {
+export const POST: RequestHandler = async ({ request }) => {
   try {
     const { address, balances } = await request.json();
     if (!address || !balances) {

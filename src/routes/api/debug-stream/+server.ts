@@ -1,4 +1,4 @@
-import type { RequestHandler } from './$types';
+import type { RequestHandler } from '@sveltejs/kit';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 

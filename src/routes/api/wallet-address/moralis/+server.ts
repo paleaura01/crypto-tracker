@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import fs from 'fs/promises';
 import path from 'path';
+import type { RequestHandler } from './$types';
 
 const MORALIS_KEY = import.meta.env.VITE_MORALIS_API_KEY!;
 const MORALIS_URL = import.meta.env.VITE_MORALIS_API_URL!;
@@ -13,10 +14,19 @@ interface MoralisToken {
   decimals: number;
 }
 
-const CHAINS = [ /* ... */ ] as const;
+const CHAINS = [
+  'eth',
+  'polygon',
+  'bsc',
+  'avalanche',
+  'fantom',
+  'cronos',
+  'arbitrum',
+  'optimism'
+] as const;
 type Chain = typeof CHAINS[number];
 
-export async function GET({ url }) {
+export const GET: RequestHandler = async ({ url }) => {
   const address = url.searchParams.get('address');
   if (!address) return json({ error: 'Missing ?address' }, { status: 400 });
 
@@ -44,6 +54,30 @@ export async function GET({ url }) {
   );
 
   const walletBalances = results.flat();
-  // ...persist and return as before...
-  return json(walletBalances);
+  
+  // Persist to file for debugging/caching
+  try {
+    const dataDir = path.join(process.cwd(), 'static', 'data');
+    const filename = `wallet-${address.slice(0, 6)}-${Date.now()}.json`;
+    const filepath = path.join(dataDir, filename);
+    
+    await fs.writeFile(filepath, JSON.stringify({
+      address,
+      timestamp: new Date().toISOString(),
+      chains: CHAINS,
+      balances: walletBalances
+    }, null, 2));
+    
+    console.log(`💾 Saved wallet data to ${filename}`);
+  } catch (error) {
+    console.error('Failed to save wallet data:', error);
+  }
+  
+  return json({
+    address,
+    chains: CHAINS,
+    balances: walletBalances,
+    total_tokens: walletBalances.length,
+    timestamp: new Date().toISOString()
+  });
 }

@@ -1,17 +1,17 @@
 import { json } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
 import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
-export async function POST({ request }) {
+export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const logData = await request.json();
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 		const filename = `debug-${logData.type || 'unknown'}-${timestamp}.json`;
 		const filepath = join('static', 'data', filename);
-		
-		// Also append to a master debug log
+				// Also append to a master debug log
 		const masterLogPath = join('static', 'data', 'debug-master.json');
-		let masterLog = [];
+		let masterLog: any[] = [];
 		
 		if (existsSync(masterLogPath)) {
 			try {

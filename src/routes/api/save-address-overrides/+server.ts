@@ -1,8 +1,10 @@
 import { json } from '@sveltejs/kit';
+import type { RequestHandler } from '@sveltejs/kit';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
-export async function POST({ request }) {  try {
+export const POST: RequestHandler = async ({ request }) => {
+  try {
     const overrides = await request.json();
     
     // Save to static/data/address-overrides.json (static files don't trigger hot reload)
