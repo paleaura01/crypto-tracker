@@ -47,10 +47,23 @@ export default defineConfig({
         NodeModulesPolyfillPlugin()
       ]
     }
-  },
-  build: {
+  },  build: {
     rollupOptions: {
-      plugins: [rollupNodePolyFill()]
-    }
+      plugins: [rollupNodePolyFill()],
+      output: {
+        // Remove or comment out chunkFileNames since SvelteKit manages this
+      },
+      onwarn(warning, warn) {
+        // Suppress empty chunk warnings
+        if (warning.code === 'EMPTY_BUNDLE') return;
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
+        if (warning.message && warning.message.includes('Generated an empty chunk')) return;
+        // Use default for everything else
+        warn(warning);
+      }
+    },
+    // Skip empty files during build
+    emptyOutDir: true,
+    minify: true
   }
 });

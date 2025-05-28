@@ -2,18 +2,14 @@
 	"name": "crypto-tracker",
 	"private": false,
 	"version": "0.0.1",
-	"type": "module",
-	"scripts": {
+	"type": "module",	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"test:mcp": "node scripts/test-mcp-client.mjs",
-		"test:mcp:vercel": "node scripts/test-mcp-client.mjs https://your-app-name.vercel.app/api/mcp",
-		"mcp:health": "powershell -ExecutionPolicy Bypass -File scripts/mcp-health-check.ps1",
+		"test:mcp": "node mcp/scripts/test-mcp-client.mjs",
 		"mcp:inspector": "npx @modelcontextprotocol/inspector --config .vscode/mcp.json",
-		"dev:mcp": "powershell -ExecutionPolicy Bypass -File scripts/dev-with-mcp.ps1",
-		"mcp:setup": "powershell -ExecutionPolicy Bypass -File scripts/setup-mcp-vercel.ps1"
+		"mcp:setup": "powershell -ExecutionPolicy Bypass -File mcp/scripts/setup-mcp-vercel.ps1"
 	},
 	"overrides": {
 		"rollup-plugin-inject": "@rollup/plugin-inject",
