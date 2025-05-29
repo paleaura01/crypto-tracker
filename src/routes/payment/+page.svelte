@@ -64,7 +64,7 @@
         if (!window.solflare) {
             throw new Error('Solflare wallet not found');
         }
-        const signedTransaction = await window.solflare.signTransaction(transaction);
+        const signedTransaction = await window.solflare.signTransaction(transaction) as { serialize: () => Uint8Array };
             const signature = await connection.sendRawTransaction(signedTransaction.serialize());
             await connection.confirmTransaction(signature);
 
