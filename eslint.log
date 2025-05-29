@@ -1,0 +1,16 @@
+
+Oops! Something went wrong! :(
+
+ESLint: 9.27.0
+
+TypeError: Key "languageOptions": Unexpected key "env" found.
+    at new Config (D:\Github\crypto-tracker\node_modules\eslint\lib\config\config.js:413:10)
+    at [finalizeConfig] (D:\Github\crypto-tracker\node_modules\eslint\lib\config\flat-config-array.js:212:10)
+    at FlatConfigArray.getConfigWithStatus (D:\Github\crypto-tracker\node_modules\@eslint\config-array\dist\cjs\index.cjs:1263:55)
+    at FlatConfigArray.getConfig (D:\Github\crypto-tracker\node_modules\@eslint\config-array\dist\cjs\index.cjs:1281:15)
+    at entryFilter (D:\Github\crypto-tracker\node_modules\eslint\lib\eslint\eslint-helpers.js:290:27)
+    at async NodeHfs.<anonymous> (file:///D:/Github/crypto-tracker/node_modules/@humanfs/core/src/hfs.js:574:24)
+    at async NodeHfs.walk (file:///D:/Github/crypto-tracker/node_modules/@humanfs/core/src/hfs.js:614:3)
+    at async globSearch (D:\Github\crypto-tracker\node_modules\eslint\lib\eslint\eslint-helpers.js:331:20)
+    at async Promise.allSettled (index 0)
+    at async globMultiSearch (D:\Github\crypto-tracker\node_modules\eslint\lib\eslint\eslint-helpers.js:422:18)

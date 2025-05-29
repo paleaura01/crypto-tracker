@@ -16,24 +16,30 @@ export const load: PageServerLoad = async ({ locals }) => {
     throw redirect(303, '/dashboard');
   }
 
-  const { data: paymentData = [], error: paymentError } = await locals.supabaseAdmin
+  const { data: paymentData = [] } = await locals.supabaseAdmin
     .from('user_payments')
     .select('*');
-  if (paymentError) console.error('Error fetching payments:', paymentError);
 
-  const { data: userListResult, error: userError } = await locals.supabaseAdmin
+  const { data: userListResult } = await locals.supabaseAdmin
     .auth.admin.listUsers();
-  if (userError) console.error('Error fetching users:', userError);
 
   // normalize both shapes
+  const userListResultData = userListResult as {
+    users?: unknown[];
+    data?: { users?: unknown[] };
+  };
   const allUsers =
-    userListResult?.users ??
-    (userListResult as any)?.data?.users ??
+    userListResultData?.users ??
+    userListResultData?.data?.users ??
     [];
 
   const users = Array.isArray(allUsers)
     ? allUsers
-        .filter((u) => u.email !== session.user.email)
+        .filter((u): u is { email: string; id: string; created_at: string; last_sign_in_at?: string } => {
+          return typeof u === 'object' && u !== null && 
+                 typeof (u as { email?: unknown }).email === 'string' &&
+                 (u as { email: string }).email !== session.user.email;
+        })
         .map((u) => {
           const payment = (paymentData || []).find((p) => p.user_id === u.id) || {};
           return {
@@ -43,7 +49,7 @@ export const load: PageServerLoad = async ({ locals }) => {
             status: payment.status ?? 'inactive',
             amount: payment.amount ?? 0,
             created_at: u.created_at,
-            last_sign_in_at: u.last_sign_in_at
+            last_sign_in_at: u.last_sign_in_at ?? null
           };
         })
     : [];

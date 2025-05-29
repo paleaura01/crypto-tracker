@@ -3,8 +3,11 @@
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabaseClient';
 
-  // cast to any so TS knows about signInWithPassword & getSession
-  const auth: any = supabase.auth;
+  // Type the auth client properly
+  const auth = supabase.auth as {
+    signInWithPassword: (credentials: { email: string; password: string }) => Promise<{ error?: { message: string } }>;
+    getSession: () => Promise<{ data: { session: unknown } }>;
+  };
 
   let email = '';
   let password = '';
@@ -30,12 +33,9 @@
     }
 
     // use the v2 method
-    const {
-      data: { session },
-      error: getSessionError
-    } = await auth.getSession();
-    if (getSessionError || !session) {
-      message = getSessionError?.message || 'Could not retrieve session.';
+    const { data: { session } } = await auth.getSession();
+    if (!session) {
+      message = 'Could not retrieve session.';
       loading = false;
       return;
     }

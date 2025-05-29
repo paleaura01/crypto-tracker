@@ -3,13 +3,12 @@ import type { PublicKey } from '@solana/web3.js';
 
 
 
-declare global {
-  interface Window {
+declare global {  interface Window {
     solflare?: {
       publicKey: PublicKey;
       connect(): Promise<void>;
-      request(args: { method: string; params?: any }): Promise<void>;
-      signTransaction(tx: any): Promise<any>;
+      request(args: { method: string; params?: unknown }): Promise<void>;
+      signTransaction(tx: unknown): Promise<unknown>;
     };
   }
 }

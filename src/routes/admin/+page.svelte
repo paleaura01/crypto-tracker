@@ -75,7 +75,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each data.users as u}
+        {#each data.users as u (u.user_id || u.email)}
           <tr class="">
             <td class="py-2 ">{u.email}</td>
             <td>{u.plan}</td>

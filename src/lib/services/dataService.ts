@@ -20,8 +20,15 @@ interface PortfolioData {
   lastUpdated: number;
 }
 
+// Define Supabase price_history row shape
+type PriceHistoryRow = {
+  assets: { symbol: string };
+  price_usd: number;
+  timestamp: string;
+};
+
 class DataService {
-  private supabase: any;
+  private supabase: ReturnType<typeof createClient>;
   
   constructor() {
     // Initialize Supabase client
@@ -39,18 +46,24 @@ class DataService {
       // Check Supabase for recent price data
       const { data: recentPrice } = await this.supabase
         .from('price_history')
-        .select('*, assets(symbol)')
+        .select('timestamp, price_usd, assets(symbol)')
         .eq('assets.symbol', symbol.toUpperCase())
         .order('timestamp', { ascending: false })
         .limit(1);
 
-      if (recentPrice && recentPrice.length > 0 && this.isRecentPrice(new Date(recentPrice[0].timestamp).getTime(), 300000)) {
-        return {
-          symbol: recentPrice[0].assets.symbol,
-          price: recentPrice[0].price_usd,
-          timestamp: new Date(recentPrice[0].timestamp).getTime(),
-          source: 'supabase'
-        };
+      // Cast to known type, default to empty
+      const rows = (recentPrice as unknown as PriceHistoryRow[]) || [];
+      if (rows.length > 0) {
+        const row = rows[0]!;
+        const ts = Date.parse(row.timestamp);
+        if (this.isRecentPrice(ts, 300000)) {
+          return {
+            symbol: row.assets.symbol,
+            price: row.price_usd,
+            timestamp: ts,
+            source: 'supabase'
+          };
+        }
       }
 
       // Fetch from API if no recent data
@@ -60,23 +73,19 @@ class DataService {
         await this.storeInSupabase(apiPrice);
         return { ...apiPrice, source: 'api' };
       }
-
       return null;
-    } catch (error) {
-      console.error('Error getting crypto price:', error);
+    } catch {
       return null;
     }
   }
 
   /**
    * Save portfolio data to Supabase
-   */
-  async savePortfolioData(data: PortfolioData): Promise<boolean> {
+   */  async savePortfolioData(data: PortfolioData): Promise<boolean> {
     try {
       await this.syncToSupabase(data);
       return true;
-    } catch (error) {
-      console.error('Error saving portfolio data:', error);
+    } catch {
       return false;
     }
   }
@@ -91,10 +100,8 @@ class DataService {
         symbol: symbol.toUpperCase(),
         price: Math.random() * 100000,
         timestamp: Date.now(),
-        source: 'api'
-      };
-    } catch (error) {
-      console.error('API fetch error:', error);
+        source: 'api'      };
+    } catch {
       return null;
     }
   }
@@ -114,12 +121,11 @@ class DataService {
       if (asset) {
         await this.supabase.from('price_history').insert({
           asset_id: asset.id,
-          price_usd: priceData.price,
-          timestamp: new Date(priceData.timestamp).toISOString()
+          price_usd: priceData.price,        timestamp: new Date(priceData.timestamp).toISOString()
         });
       }
-    } catch (error) {
-      console.error('Supabase store error:', error);
+    } catch {
+      // Silently fail for storage errors
     }
   }
 
@@ -129,11 +135,10 @@ class DataService {
         user_id: portfolioData.userId,
         wallet_address: portfolioData.walletAddress,
         data: portfolioData,
-        total_value: portfolioData.totalValue,
-        last_updated: new Date(portfolioData.lastUpdated).toISOString()
+        total_value: portfolioData.totalValue,        last_updated: new Date(portfolioData.lastUpdated).toISOString()
       });
-    } catch (error) {
-      console.error('Supabase sync error:', error);
+    } catch {
+      // Silently fail for sync errors
     }
   }
 

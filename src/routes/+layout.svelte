@@ -40,9 +40,8 @@
           : 'light')
     );
 
-    // cast to any so TS knows about onAuthStateChange
-    const authAny = supabase.auth as any;
-    const { subscription } = authAny.onAuthStateChange((event: any, session: any) => {
+    // Handle auth state changes with proper typing
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, _session) => {
       invalidateAll();
     });
 

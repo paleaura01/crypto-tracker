@@ -34,10 +34,13 @@ export default {
           }
         ]
       }
-    }),
-    alias: {
+    }),    alias: {
       $lib: resolve('src/lib'),
-      '$lib/server': resolve('src/lib/server')
+      '$lib/server': resolve('src/lib/server'),
+      '$types': resolve('src/lib/types'),
+      '$services': resolve('src/lib/services'),
+      '$utils': resolve('src/lib/utils'),
+      '$components': resolve('src/lib/components')
     }
   }
 };

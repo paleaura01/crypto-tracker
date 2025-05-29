@@ -4,7 +4,6 @@ import crypto from 'crypto';
 
 import nacl from 'tweetnacl';
 import { importJWK, SignJWT, type JWK } from 'jose';
-import { env } from '$env/dynamic/private';
 import type {
   ExchangeV2Account,
   ExchangeV3Account,
@@ -18,9 +17,18 @@ const V3_PATH     = '/api/v3/brokerage/accounts';
 const CB_VERSION  = '2025-01-01';
 const CUSTODIAL_PATH = '/api/v2/accounts';
 
+interface CoinbaseKeyData {
+  id?: string;
+  name?: string;
+  privateKey?: string;
+  kty?: string;
+  d?: string;
+  x?: string;
+  crv?: string;
+}
 
 // Load raw key from your profiles table
-async function loadRawKey(userId: string): Promise<any> {
+async function loadRawKey(userId: string): Promise<CoinbaseKeyData> {
   const { data, error } = await supabaseServer
     .from('profiles')
     .select('coinbase_key_json')
@@ -41,15 +49,15 @@ async function getJwk(userId: string): Promise<JWK> {
   if (jwkCache.has(userId)) return jwkCache.get(userId)!;
   const parsed = await loadRawKey(userId);
   let jwk: JWK;
-
   if (parsed.kty && parsed.d && parsed.x) {
-    jwk = { ...(parsed as JWK), kid: parsed.id ?? parsed.name };
+    jwk = { ...(parsed as JWK), kid: parsed.id ?? parsed.name ?? 'unknown' };
   } else if (parsed.privateKey && parsed.privateKey.includes('BEGIN')) {
     const keyObj = crypto.createPrivateKey({ key: parsed.privateKey, format: 'pem' });
     jwk = keyObj.export({ format: 'jwk' }) as JWK;
-    jwk.kid = parsed.id ?? parsed.name;
+    jwk.kid = parsed.id ?? parsed.name ?? 'unknown';
   } else {
     // assume Ed25519 seed
+    if (!parsed.privateKey) throw new Error('Missing privateKey');
     const blob = Buffer.from(parsed.privateKey, 'base64');
     const seed = blob.subarray(0, 32);
     const { publicKey } = nacl.sign.keyPair.fromSeed(new Uint8Array(seed));
@@ -58,7 +66,7 @@ async function getJwk(userId: string): Promise<JWK> {
       crv: 'Ed25519',
       d: Buffer.from(seed).toString('base64url'),
       x: Buffer.from(publicKey).toString('base64url'),
-      kid: parsed.id ?? parsed.name
+      kid: parsed.id ?? parsed.name ?? 'unknown'
     };
   }
 
@@ -83,6 +91,10 @@ async function makeJwt(userId: string, path: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const nonce = crypto.randomBytes(16).toString('hex');
   const uri = `GET ${CB_API_HOST}${path}`;
+
+  if (!jwk.kid) {
+    throw new Error('JWK kid is required but not present');
+  }
 
   return new SignJWT({ iss: 'cdp', sub: jwk.kid, iat: now, nbf: now, exp: now + 120, uri })
     .setProtectedHeader({ alg, kid: jwk.kid, nonce })
@@ -134,7 +146,7 @@ export async function fetchLoanData(userId: string): Promise<LoanData[]> {
     loanAmount: row.borrowed_usdc
   }));
 }
-export async function getCoinbaseKey(userId: string): Promise<any> {
+export async function getCoinbaseKey(userId: string): Promise<CoinbaseKeyData> {
   return loadRawKey(userId);
 }
 

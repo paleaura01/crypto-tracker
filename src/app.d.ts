@@ -21,9 +21,9 @@ declare global {
 declare module '*.svelte' {
   import { SvelteComponentTyped } from 'svelte';
   export default class Component<
-    Props extends Record<string, any> = Record<string, any>,
-    Events extends Record<string, any> = Record<string, any>,
-    Slots extends Record<string, any> = Record<string, any>
+    Props extends Record<string, unknown> = Record<string, unknown>,
+    Events extends Record<string, unknown> = Record<string, unknown>,
+    Slots extends Record<string, unknown> = Record<string, unknown>
   > extends SvelteComponentTyped<Props, Events, Slots> {}
 }
 

@@ -9,17 +9,13 @@
   };
 
   onMount(async () => {
-    console.log('Dashboard onMount: starting session check...');
     const {
-      data: { session },
-      error
+      data: { session }
     } = await supabase.auth.getSession();
-    console.log('getSession() result:', session, 'error:', error);
     if (!session) {
       // redirect if needed...
     } else {
-      console.log('User is logged in:', session.user.email);
-      console.log('Server says isAdmin =', data.isAdmin);
+      // User is logged in - admin status available in data.isAdmin
     }
   });
 </script>

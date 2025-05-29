@@ -1,6 +1,6 @@
 // src/hooks.server.ts
 import type { Handle } from '@sveltejs/kit';
-import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type Session } from '@supabase/supabase-js';
 import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import cookie from 'cookie';

@@ -14,15 +14,15 @@ function createCoingeckoStore() {
     // CoinGecko wants IDs, so lowercase & comma-join
     const ids = symbols.map(s => s.toLowerCase()).join(',');
     const url = `${API}?ids=${ids}&vs_currencies=usd`;
-    try {
-      const data = await fetch(url).then(r => r.json()) as Record<string, { usd: number }>;
+    try {      const data = await fetch(url).then(r => r.json()) as Record<string, { usd: number }>;
       const out: PriceMap = {};
       for (const id of Object.keys(data)) {
-        out[id.toUpperCase()] = data[id].usd;
+        if (data[id]?.usd !== undefined) {
+          out[id.toUpperCase()] = data[id].usd;
+        }
       }
-      set(out);
-    } catch (e) {
-      console.error('Coingecko fetch failed', e);
+      set(out);    } catch {
+      // Error handling could be added here if needed
     }
   }
 

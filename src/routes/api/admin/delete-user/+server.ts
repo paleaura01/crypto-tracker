@@ -31,7 +31,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       .delete()
       .eq('user_id', userId);
     if (paymentError) {
-      console.error('Error deleting payment records:', paymentError);
       throw new Error('Failed to delete payment records');
     }
 
@@ -40,14 +39,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       userId
     );
     if (userError) {
-      console.error('Error deleting user:', userError);
       throw new Error('Failed to delete user');
     }
 
     return json({ success: true }, { status: 200 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('Delete user error:', message);
     return json({ message }, { status: 500 });
   }
 };

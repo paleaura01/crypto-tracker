@@ -31,8 +31,8 @@ export function startBtcTicker() {
     }
   });
 
-  ws.addEventListener('error', (err) => {
-    console.error('WS error', err);
+  ws.addEventListener('error', (_err) => {
+    // Error handling could be added here if needed
   });
 
   ws.addEventListener('close', () => {

@@ -1,7 +1,6 @@
 <script lang="ts">
-  import CoinbaseExchange from './components/CBExchangeBalances.svelte';
-  import CBLoanSummary from './components/CBLoanSummary.svelte';
-  import EVMAddressBalances from './components/EVMAddressBalances.svelte';
+  // Use components from the centralized lib structure
+  import { CBExchangeBalances, CBLoanSummary, PortfolioDisplay } from '$lib/components';
 
   import type {
     WalletAccount,
@@ -19,13 +18,13 @@
 </script>
 
 <section class="p-4 space-y-8">
-    <!-- Your on-chain one-off balances via Moralis -->
-  <EVMAddressBalances />
+  <!-- Your on-chain one-off balances via Moralis -->
+  <PortfolioDisplay portfolio={[]} loading={false} error="" />
+  
   <CBLoanSummary loans={loans} />
-  <CoinbaseExchange
+  
+  <CBExchangeBalances
     wallets={wallet}
     exchangeV3={exchangeV3}
   />
-
-  
 </section>

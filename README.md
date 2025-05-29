@@ -593,7 +593,7 @@ class BitqueryProvider implements ChainProvider { /* ... */ }
 
 ### 📊 **Portfolio Endpoints**
 
-#### **GET /api/balances/[address]**
+#### **GET /api/wallet/balances/[address]**
 Retrieve wallet balances for a specific address across all supported chains.
 
 ```typescript

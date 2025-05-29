@@ -1,37 +1,11 @@
-// src/lib/server/types.ts
+// Legacy server types - migrated to centralized type system
+// This file is kept for backward compatibility
+// @deprecated - Use types from ../types/exchange instead
 
-export interface ExchangeV2Account {
-  id: string;
-  currency: string;
-  balance: { value: string; currency: string };
-  // mark available_balance optional
-  available_balance?: { value: string; currency: string };
-  [k: string]: any;
-}
-
-export interface ExchangeV3Account {
-  id: string;
-  currency: string;
-  balance: { value: string; currency: string };
-  available_balance?: { value: string; currency: string };
-  [k: string]: any;
-}
-
-export interface WalletAccount {
-  id: string;
-  balance: { amount: string; currency: string };
-  [k: string]: any;
-}
-
-export interface LoanData {
-  id: string;            // UUID of the loan record
-  collateral: number;    // BTC collateral amount
-  loanAmount: number;    // USDC borrowed amount
-}
-
-/** New: Coinbase custodial wallet account */
-export interface CustodialAccount {
-  id: string;
-  name: string;
-  balance: { amount: string; currency: string };
-}
+export type {
+  ExchangeV2Account,
+  ExchangeV3Account,
+  WalletAccount,
+  CustodialAccount,
+  LoanData
+} from '../types/exchange.js';

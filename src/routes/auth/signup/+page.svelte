@@ -20,9 +20,6 @@
     SystemProgram
   } = solanaWeb3;
 
-  // cast so TS stops complaining about v2 auth methods
-  const auth: any = supabase.auth;
-
   let hydrated = false;
   let mounted = false;
   let email = '';
@@ -49,7 +46,7 @@
     mounted = true;       // unblock wallet UI
 
     try {
-      const res = await fetch('/api/solana-price');
+      const res = await fetch('/api/crypto/solana-price');
       const { price } = await res.json();
       solanaPrice = price;
     } catch {
@@ -63,8 +60,8 @@
     try {
       await connectSolflare();
       message = 'Wallet connected!';
-    } catch (err: any) {
-      message = err.message;
+    } catch (err: unknown) {
+      message = err instanceof Error ? err.message : 'Failed to connect wallet';
     } finally {
       loading = false;
     }
@@ -104,7 +101,7 @@
       tx.recentBlockhash = blockhash;
       tx.feePayer = fromPub;
 
-      const solflare = (window as any).solflare;
+      const solflare = (window as { solflare?: { signTransaction: (tx: unknown) => Promise<{ serialize: () => Uint8Array }> } }).solflare;
       if (!solflare) throw new Error('Solflare not available');
       const signed = await solflare.signTransaction(tx);
       const sig = await conn.sendRawTransaction(signed.serialize());
@@ -112,18 +109,19 @@
       if (conf.value.err) throw new Error('Payment failed to confirm.');
 
       // sign up and session via v2 API
-      const { data: suData, error: suErr } = await auth.signUp({ email, password });
+      const { data: suData, error: suErr } = await supabase.auth.signUp({ email, password });
       if (suErr) throw suErr;
 
       let userId = suData.user?.id;
       if (!userId) {
-        const { data: guData, error: guErr } = await auth.getUser();
+        const { data: guData, error: guErr } = await supabase.auth.getUser();
         if (guErr) throw guErr;
-        userId = guData.user?.id!;
+        if (!guData.user?.id) throw new Error('User ID not found');
+        userId = guData.user.id;
       }
 
       // record payment
-      const payRes = await fetch('/api/create-payment', {
+      const payRes = await fetch('/api/payments/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -137,11 +135,8 @@
       if (payJson.error) throw new Error(payJson.error);
 
       // set session cookie
-      const {
-        data: { session },
-        error: sessErr
-      } = await auth.getSession();
-      if (sessErr) throw sessErr;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session available');
 
       const setRes = await fetch('/api/set-session-cookie', {
         method: 'POST',
@@ -155,9 +150,8 @@
       }
 
       goto('/dashboard', { replaceState: true, invalidateAll: true });
-    } catch (err: any) {
-      console.error(err);
-      message = err.message;
+    } catch (err: unknown) {
+      message = err instanceof Error ? err.message : 'Signup failed';
     } finally {
       loading = false;
     }

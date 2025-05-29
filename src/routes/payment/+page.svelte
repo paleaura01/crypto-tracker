@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import { onMount } from 'svelte';
     import { walletStore, connectSolflare } from '$lib/stores/wallet';
     import { supabase } from '$lib/supabaseClient';
@@ -7,7 +7,7 @@
     import { Connection, PublicKey, LAMPORTS_PER_SOL, Transaction, SystemProgram } from '@solana/web3.js';
 
     let loading = false;
-    let error = null;
+    let error: string | null = null;
     let solanaPrice = 0;
     let solanaAmount = 0;
     const PAYMENT_AMOUNT_USD = 5; // $5 USD
@@ -19,11 +19,11 @@
             goto('/auth/login');
         }
         try {
-            const response = await fetch('/api/solana-price');
+            const response = await fetch('/api/crypto/solana-price');
             const { price } = await response.json();
             solanaPrice = price;
             solanaAmount = PAYMENT_AMOUNT_USD / solanaPrice;
-        } catch (err) {
+        } catch {
             error = 'Failed to fetch Solana price';
         }
     });
@@ -41,28 +41,30 @@
 
     async function handlePayment() {
         try {
-            loading = true;
-            if (!$walletStore.connected) {
-                throw new Error('Please connect your wallet first');
-            }
+            loading = true;        if (!$walletStore.connected || !$walletStore.publicKey) {
+            throw new Error('Please connect your wallet first');
+        }
 
-            const connection = new Connection(env.PUBLIC_SOLANA_RPC_URL);
-            const recipientPubKey = new PublicKey(RECIPIENT_ADDRESS);
-            const lamports = Math.floor(solanaAmount * LAMPORTS_PER_SOL);
+        const connection = new Connection(env.PUBLIC_SOLANA_RPC_URL);
+        const recipientPubKey = new PublicKey(RECIPIENT_ADDRESS);
+        const lamports = Math.floor(solanaAmount * LAMPORTS_PER_SOL);
 
-            const transaction = new Transaction().add(
-                SystemProgram.transfer({
-                    fromPubkey: new PublicKey($walletStore.publicKey),
-                    toPubkey: recipientPubKey,
-                    lamports,
-                })
-            );
+        const transaction = new Transaction().add(
+            SystemProgram.transfer({
+                fromPubkey: new PublicKey($walletStore.publicKey),
+                toPubkey: recipientPubKey,
+                lamports,
+            })
+        );
 
-            const { blockhash } = await connection.getRecentBlockhash();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = new PublicKey($walletStore.publicKey);
+        const { blockhash } = await connection.getRecentBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = new PublicKey($walletStore.publicKey);
 
-            const signedTransaction = await window.solflare.signTransaction(transaction);
+        if (!window.solflare) {
+            throw new Error('Solflare wallet not found');
+        }
+        const signedTransaction = await window.solflare.signTransaction(transaction);
             const signature = await connection.sendRawTransaction(signedTransaction.serialize());
             await connection.confirmTransaction(signature);
 
@@ -97,12 +99,11 @@
             on:click={handleWalletConnection}
             disabled={loading}
             class="wallet-button"
-        >
-            {#if $walletStore.connected}
-                Disconnect Wallet ({$walletStore.publicKey.slice(0, 4)}...{$walletStore.publicKey.slice(-4)})
-            {:else}
-                Connect Solflare Wallet
-            {/if}
+        >        {#if $walletStore.connected && $walletStore.publicKey}
+            Disconnect Wallet ({$walletStore.publicKey.slice(0, 4)}...{$walletStore.publicKey.slice(-4)})
+        {:else}
+            Connect Solflare Wallet
+        {/if}
         </button>
         
         {#if $walletStore.connected}

@@ -2,7 +2,7 @@
 
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { env } from '$env/dynamic/public';
 
 export interface WalletState {
@@ -72,15 +72,14 @@ export async function connectSolflare(): Promise<boolean> {
     walletStore.update(s => ({ ...s, balance: raw / LAMPORTS_PER_SOL }));
 
     return true;
-  } catch (error) {
-    console.error('Solflare connection error:', error);
+  } catch {
     walletStore.set({
       connected: false,
       publicKey: null,
       balance: null,
       network: 'devnet'
     });
-    throw error;
+    throw new Error('Solflare connection failed');
   }
 }
 
@@ -96,8 +95,7 @@ export async function requestAirdrop(): Promise<boolean> {
     const raw = await conn.getBalance(window.solflare.publicKey);
     walletStore.update(s => ({ ...s, balance: raw / LAMPORTS_PER_SOL }));
     return true;
-  } catch (error) {
-    console.error('Airdrop error:', error);
-    throw error;
+  } catch {
+    return false;
   }
 }

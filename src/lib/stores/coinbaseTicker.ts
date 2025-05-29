@@ -26,7 +26,9 @@ export function startTicker(productIds: string[]) {
       ws = null;
       setTimeout(() => startTicker(productIds), 3000);
     });
-    ws.addEventListener('error', console.error);
+    ws.addEventListener('error', (_error) => {
+      // Error handling could be added here if needed
+    });
   }
 
   const subscribe = () => {

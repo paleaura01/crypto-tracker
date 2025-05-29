@@ -1,25 +1,57 @@
 {
   "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {
+    // JavaScript Support
     "allowJs": true,
-		"checkJs": false,
+    "checkJs": false,
+    
+    // Type Checking
     "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    
+    // Module Resolution
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "preserveValueImports": false,
-    "resolveJsonModule": true
-  },
-  "include": [
+    "resolveJsonModule": true,
+    "moduleResolution": "bundler",
+    
+    // Error Handling
+    "useUnknownInCatchVariables": false,
+    
+    // Code Quality
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    
+    // Emit
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    
+    // Performance
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    
+    // Target & Library
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },  "include": [
     "src/**/*",
     "src/app.html",
     "env.d.ts",
     "global.d.ts",
-    "src/app.d.ts"
-, "data"  ],
+    "src/app.d.ts",
+    "vitest.config.ts",
+    "data"
+  ],
   "exclude": ["node_modules", ".svelte-kit"]
 }

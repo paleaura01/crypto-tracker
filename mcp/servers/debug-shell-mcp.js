@@ -13,7 +13,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
@@ -183,8 +183,7 @@ class DebugShellServer {
             return await this.parseDebugEvents(args);
           default:
             throw new Error(`Unknown tool: ${name}`);
-        }
-      } catch (error) {
+        }      } catch (error) {
         return {
           content: [
             {
@@ -361,8 +360,7 @@ class DebugShellServer {
 
         let result = `📋 Last ${lines} debug log entries:\n`;
         result += '═'.repeat(50) + '\n';
-        
-        recentLines.forEach((line, index) => {
+          recentLines.forEach((line) => {
           if (line.trim()) {
             // Parse and format the log line
             const match = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z) \[([^\]]+)\] (.+)$/);

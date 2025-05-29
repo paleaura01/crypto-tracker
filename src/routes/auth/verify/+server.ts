@@ -21,7 +21,6 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ success: true }, { status: 200 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('Error in verify endpoint:', err);
     return json({ success: false, error: message }, { status: 500 });
   }
 };
