@@ -2,8 +2,7 @@
   "framework": "svelte",
   "buildCommand": "npm run build",
   "outputDirectory": "build",
-  "env": {
-    "MCP_SERVER_TIMEOUT": "30000",
-    "MCP_MAX_CONNECTIONS": "100"
+  "functions": {
+    "excludeFiles": ["mcp/**"]
   }
 }

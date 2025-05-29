@@ -32,8 +32,8 @@
       try {
           loading = true;
           await connectSolflare();
-      } catch (err) {
-          error = err.message;
+      } catch (err: unknown) {
+          error = err instanceof Error ? err.message : 'Wallet connection failed';
       } finally {
           loading = false;
       }
@@ -57,7 +57,7 @@
             })
         );
 
-        const { blockhash } = await connection.getRecentBlockhash();
+        const { blockhash } = await connection.getLatestBlockhash();
         transaction.recentBlockhash = blockhash;
         transaction.feePayer = new PublicKey($walletStore.publicKey);
 
@@ -82,8 +82,8 @@
             }
 
             goto('/dashboard');
-        } catch (err) {
-            error = err.message;
+        } catch (err: unknown) {
+            error = err instanceof Error ? err.message : 'Payment failed';
         } finally {
             loading = false;
         }
