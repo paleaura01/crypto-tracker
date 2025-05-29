@@ -41,7 +41,7 @@
     }
 
     // set the HTTP-only cookie
-    const res = await fetch('/api/set-session-cookie', {
+    const res = await fetch('/api/system/set-session-cookie', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },

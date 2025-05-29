@@ -138,7 +138,7 @@
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No session available');
 
-      const setRes = await fetch('/api/set-session-cookie', {
+      const setRes = await fetch('/api/system/set-session-cookie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
