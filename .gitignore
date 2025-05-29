@@ -26,3 +26,6 @@ vite.config.ts.timestamp-*
 /logs
 /tmp
 
+# MCP tools
+mcp/
+
