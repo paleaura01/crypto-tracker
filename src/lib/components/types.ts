@@ -18,6 +18,7 @@ export interface PortfolioItem {
   value: number;
   contractAddress?: string;
   chain?: string;
+  coinGeckoId?: string | null;
 }
 
 export interface PortfolioDisplayProps {
@@ -100,4 +101,67 @@ export interface DebugPanelProps {
   balancesLoading?: boolean;
 }
 
-// ...existing wallet component types...
+// Multi-Wallet Support Types
+export interface RawToken {
+  symbol: string;
+  balance: string;
+  contract_address: string;
+  chain: 'eth' | 'polygon' | 'bsc';
+  token_address: string;
+  decimals: number;
+}
+
+export interface WalletData {
+  id: string;
+  address: string;
+  label?: string;
+  rawOnchain: RawToken[];
+  portfolio: PortfolioItem[];
+  loadingBalances: boolean;
+  balancesLoaded: boolean;
+  error: string;
+  lastUpdated?: Date;
+  addressOverrides: OverrideMap;
+  symbolOverrides: OverrideMap;
+  expanded: boolean; // UI state for collapsible sections
+}
+
+export interface OverrideMap {
+  [contractAddress: string]: string | null;
+}
+
+export interface CoinListEntry {
+  id: string;
+  symbol: string;
+  name: string;
+  platforms?: Record<string, string>;
+}
+
+export interface PriceResponse {
+  [coinGeckoId: string]: {
+    usd: number;
+  };
+}
+
+export type GlobalPriceResp = PriceResponse | { error: string } | null;
+
+// Multi-Wallet Component Props
+export interface MultiWalletHeaderProps {
+  totalPortfolioValue: number;
+  walletsCount: number;
+  chainsCount: number;
+  tokensCount: number;
+  loadingPrices: boolean;
+  onAddWallet: () => void;
+  onLoadAllPrices: () => void;
+  onShowAdvanced: () => void;
+}
+
+export interface WalletSectionProps {
+  wallet: WalletData;
+  coinList: CoinListEntry[];
+  globalPriceResponse: GlobalPriceResp | null;
+  onUpdateWallet: (wallet: WalletData) => void;
+  onRemoveWallet: (walletId: string) => void;
+  onLoadBalances: (walletId: string) => void;
+}
