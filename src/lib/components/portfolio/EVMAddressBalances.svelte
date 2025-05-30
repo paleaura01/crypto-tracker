@@ -1,13 +1,12 @@
 <!-- Refactored EVMAddressBalances.svelte - Modern modular architecture -->
 <script lang="ts">
-  export const ssr = false;
   import { onMount } from 'svelte';
   import { writable, get } from 'svelte/store';    // Import our new modular components
   import AddressInput from '$lib/components/shared/AddressInput.svelte';
   import OverrideManager from '$lib/components/portfolio/OverrideManager.svelte';
-  import RawDataViewer from '$lib/components/debug/RawDataViewer.svelte';
-  import DebugPanel from '$lib/components/debug/DebugPanel.svelte';
-    // Import types
+  import RawDataViewer from '$lib/components/debug/RawDataViewer.svelte';  import DebugPanel from '$lib/components/debug/DebugPanel.svelte';
+  
+  // Import types
   import type {
     PortfolioItem,
     DebugInfo,
@@ -54,9 +53,11 @@
   // Price data
   type PriceResp = Record<string, { usd: number }> | { error: string } | null;
   let cgResponse: PriceResp = null;
-
   // Final portfolio
-  let portfolio: PortfolioItem[] = [];
+  let portfolio: PortfolioItem[] = [];  // UI state for compact design
+  let showAllTokens = false;
+  let showAdvancedCard = false; // New state for card swapping
+  let showTokenHoldings = false; // New state for token holdings expansion
 
   // Override state management
   const addressOverrideMap = writable<Record<string, string | null>>({});
@@ -457,8 +458,7 @@
     return window.setInterval(() => {
       addDebugEvent('HEARTBEAT', 'Component still active');
     }, 30000);
-  }
-  // Handle address input
+  }  // Handle address input
   async function handleAddressSubmit(event: CustomEvent<{ address: string }>) {
     address = event.detail.address;
     // Reset state when address changes
@@ -467,6 +467,7 @@
     portfolio = [];
     balancesLoaded = false;
     pricesLoaded = false;
+    showTokenHoldings = false;
     error = '';
     
     // Check for cached data for the new address (this will also load overrides)
@@ -509,411 +510,304 @@
     // Recompute portfolio
     computePortfolio();
   }
-
   // Compute portfolio whenever rawOnchain or cgResponse change (always trigger on rawOnchain)
   $: if (rawOnchain.length > 0) {
     computePortfolio();
   }
+
+  // Auto-expand token holdings when portfolio is loaded
+  $: if (portfolio.length > 0) {
+    showTokenHoldings = true;
+  }
 </script>
 
-<div class="evm-address-balances">
-  <AddressInput 
-    bind:address
-    loading={loadingBalances || loadingPrices}
-    {error}
-    on:submit={handleAddressSubmit}
-    on:save={handleAddressSave}
-  />
-
-  <!-- Manual Control Buttons -->
-  {#if address.trim()}
-    <div class="control-buttons">
-      <button 
-        class="btn btn-primary"
-        class:loading={loadingBalances}
-        disabled={loadingBalances || loadingPrices}
-        on:click={loadBalances}
-      >
-        {#if loadingBalances}
-          Loading...
-        {:else if balancesLoaded}
-          Refresh Balances
-        {:else}
-          Load Balances
-        {/if}
-      </button>
-
-      {#if balancesLoaded && rawOnchain.length > 0}
-        <button 
-          class="btn btn-secondary"
-          class:loading={loadingPrices}
-          disabled={loadingBalances || loadingPrices}
-          on:click={loadPrices}
-        >
-          {#if loadingPrices}
-            Loading...
-          {:else if pricesLoaded}
-            Refresh Prices
-          {:else}
-            Load Prices
-          {/if}
-        </button>
-      {/if}
-
-      <!-- Cache Status Indicators -->
-      <div class="cache-status">
-        {#if balancesLoaded}
-          <span class="status-indicator status-success">✓ Balances</span>
-        {/if}
-        {#if pricesLoaded}
-          <span class="status-indicator status-success">✓ Prices</span>
-        {/if}
+<!-- Modern Two-Card Crypto Portfolio Widget -->
+<div class="w-full max-w-6xl mx-auto p-4 space-y-6">
+  <!-- Header Section -->
+  <div class="text-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+      <span class="text-4xl">💼</span>
+      Crypto Portfolio Tracker
+    </h1>
+    {#if portfolio.length > 0}
+      <div class="text-2xl font-bold text-green-600">
+        ${portfolio.reduce((sum, item) => sum + item.value, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </div>
-    </div>
-  {/if}  {#if portfolio.length > 0}
-    <div class="portfolio-section">
-      <div class="portfolio-header">
-        <div class="header-left">
-          <h3>
-            {#if pricesLoaded}
-              Tradable Assets ({portfolio.filter(token => token.price > 0).length} tokens)
-            {:else}
-              All Assets ({portfolio.length} tokens)
+      <div class="text-sm text-gray-500">{portfolio.length} tokens across {[...new Set(portfolio.map(t => t.chain))].length} chains</div>
+    {/if}
+  </div>  <!-- Single Connected Card Layout -->
+  <div class="max-w-4xl mx-auto">
+    
+    <!-- Main Card: Portfolio Management & Token Holdings -->
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+      
+      <!-- Top Section: Wallet Address Controls -->
+      <div class="p-6 space-y-6 relative border-b border-gray-100">
+        
+        {#if !showAdvancedCard}
+          <!-- Wallet Address Card -->
+          <!-- Settings Cog Button -->
+          <button 
+            class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            on:click={() => showAdvancedCard = true}
+            title="Advanced Settings"
+          >
+            <span class="text-xl">⚙️</span>
+          </button>
+
+          <!-- Status Indicators -->
+          <div class="flex flex-wrap gap-2 justify-center lg:justify-start pr-12">
+            {#if balancesLoaded}
+              <span class="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg">
+                <span>✓</span>
+                Balances Loaded
+              </span>
             {/if}
-          </h3>
-          <span class="total-tokens">of {portfolio.length} total tokens</span>
-        </div>
-        <div class="total-value">
-          Total Value: <span class="value-amount">${portfolio.reduce((sum, item) => sum + item.value, 0).toFixed(2)}</span>
-        </div>
-      </div>
-        <div class="portfolio-table">
-        <div class="table-header">
-          <div>Token</div>
-          <div>Balance</div>
-          <div>Price</div>
-          <div>Value</div>
-          <div>Chain</div>
-        </div>
-        <div class="table-body">
-          {#each (pricesLoaded ? portfolio.filter(token => token.price > 0) : portfolio).sort((a, b) => b.value - a.value) as token}
-            <div class="table-row">
-              <div class="col-token">
-                <div class="token-info">
-                  <span class="token-symbol">{token.symbol}</span>
-                  {#if token.contractAddress}
-                    <span class="contract-address" title={token.contractAddress}>
-                      {token.contractAddress.slice(0, 6)}...{token.contractAddress.slice(-4)}
-                    </span>
+            {#if pricesLoaded}
+              <span class="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg">
+                <span>💰</span>
+                Prices Loaded
+              </span>
+            {/if}
+            {#if error}
+              <span class="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg">
+                <span>⚠</span>
+                Error
+              </span>
+            {/if}
+          </div>
+
+          <!-- Address Input Section -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span>🔍</span>
+                Wallet Address
+              </h3>
+              
+              <!-- Action Buttons -->
+              {#if address.trim()}
+                <div class="flex gap-2">
+                  <button 
+                    class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class:animate-pulse={loadingBalances}
+                    disabled={loadingBalances || loadingPrices}
+                    on:click={loadBalances}
+                    title={balancesLoaded ? 'Refresh Balances' : 'Load Balances'}
+                  >
+                    <span class="text-sm">🔄</span>
+                    {balancesLoaded ? 'Refresh' : 'Load'}
+                  </button>
+
+                  {#if balancesLoaded && rawOnchain.length > 0}
+                    <button 
+                      class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      class:animate-pulse={loadingPrices}
+                      disabled={loadingBalances || loadingPrices}
+                      on:click={loadPrices}
+                      title={pricesLoaded ? 'Refresh Prices' : 'Load Prices'}
+                    >
+                      <span class="text-sm">💲</span>
+                      Prices
+                    </button>
                   {/if}
                 </div>
-              </div>
-              <div class="col-balance">
-                <span class="balance-amount">{token.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
-              </div>
-              <div class="col-price">
-                <span class="price-amount">${token.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span>
-              </div>
-              <div class="col-value">
-                <span class="value-amount">${token.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div class="col-chain">
-                <span class="chain-badge chain-{token.chain}">{token.chain?.toUpperCase() || 'ETH'}</span>
-              </div>
+              {/if}
             </div>
-          {/each}
-        </div>
+
+            <AddressInput 
+              bind:address
+              loading={loadingBalances || loadingPrices}
+              {error}
+              on:submit={handleAddressSubmit}
+              on:save={handleAddressSave}
+            />
+          </div>
+
+          <!-- Welcome/Empty States -->
+          {#if !address.trim()}
+            <div class="text-center py-8 space-y-4">
+              <div class="text-6xl">🚀</div>
+              <div class="text-lg font-medium text-gray-600">Enter a wallet address to get started</div>
+              <div class="text-sm text-gray-500">Track your crypto portfolio across Ethereum, Polygon, and BSC</div>
+            </div>
+          {:else if balancesLoaded && rawOnchain.length === 0}
+            <div class="text-center py-8 space-y-4">
+              <div class="text-6xl">📭</div>
+              <div class="text-lg font-medium text-gray-600">No tokens found</div>
+              <div class="text-sm text-gray-500">This address doesn't have any tokens on the supported chains</div>
+            </div>
+          {/if}
+
+        {:else}
+          <!-- Advanced Features Card -->
+          <!-- Back Button -->
+          <button 
+            class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            on:click={() => showAdvancedCard = false}
+            title="Back to Wallet"
+          >
+            <span class="text-xl">←</span>
+          </button>
+
+          <div class="space-y-6 pr-12">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span>⚙️</span>
+              Advanced Features
+            </h3>
+
+            <div class="space-y-4">
+              <OverrideManager
+                availableTokens={rawOnchain.map(token => ({ symbol: get(symbolOverrideMap)[token.contract_address] || token.symbol, contractAddress: token.contract_address || '', chain: token.chain || 'eth' }))}
+                coinList={coinList.map(coin => ({ ...coin, name: coin.name || coin.symbol }))}
+                addressOverrides={$addressOverrideMap}
+                symbolOverrides={$symbolOverrideMap}
+                on:addressOverride={handleAddressOverride}
+                on:symbolOverride={handleSymbolOverride}
+              />
+
+              <DebugPanel {debugInfo} />
+              
+              <RawDataViewer 
+                rawOnchain={rawOnchain.map(token => ({
+                  ...token,
+                  token_address: token.contract_address,
+                  decimals: token.decimals || 18
+                }))}
+                priceResponse={cgResponse && typeof cgResponse === 'object' && !('error' in cgResponse) ? cgResponse : null}
+                coinList={coinList.map(coin => ({ ...coin, name: coin.name || coin.symbol }))}
+              />
+            </div>
+          </div>
+        {/if}
       </div>
-    </div>
-  {:else if balancesLoaded && rawOnchain.length === 0}
-    <div class="no-tokens">
-      <p>No tokens found for this address.</p>
-    </div>
-  {/if}
 
-  <OverrideManager
-    availableTokens={rawOnchain.map(token => ({ symbol: get(symbolOverrideMap)[token.contract_address] || token.symbol, contractAddress: token.contract_address || '', chain: token.chain || 'eth' }))}
-    coinList={coinList.map(coin => ({ ...coin, name: coin.name || coin.symbol }))}
-    addressOverrides={$addressOverrideMap}
-    symbolOverrides={$symbolOverrideMap}
-    on:addressOverride={handleAddressOverride}
-    on:symbolOverride={handleSymbolOverride}
-  />
+      <!-- Expandable Token Holdings Section -->
+      {#if portfolio.length > 0 && !showAdvancedCard}
+        <!-- Toggle Button -->
+        <button 
+          class="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors duration-200 border-b border-gray-100"
+          on:click={() => showTokenHoldings = !showTokenHoldings}
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🪙</span>
+            <span class="text-lg font-semibold text-gray-900">Token Holdings</span>
+            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+              {portfolio.length}
+            </span>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <div class="text-xl font-bold text-green-600">
+                ${portfolio.reduce((sum, item) => sum + item.value, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div class="text-xs text-gray-500">{[...new Set(portfolio.map(t => t.chain))].length} chains</div>
+            </div>
+            <span class="text-2xl transform transition-transform duration-200" class:rotate-180={showTokenHoldings}>
+              ⌄
+            </span>
+          </div>
+        </button>
 
-  <DebugPanel {debugInfo} />
-  
-  <RawDataViewer 
-    rawOnchain={rawOnchain.map(token => ({
-      ...token,
-      token_address: token.contract_address,
-      decimals: token.decimals || 18
-    }))}
-    priceResponse={cgResponse && typeof cgResponse === 'object' && !('error' in cgResponse) ? cgResponse : null}
-    coinList={coinList.map(coin => ({ ...coin, name: coin.name || coin.symbol }))}
-  />
+        <!-- Expandable Token List -->
+        <div class="overflow-hidden transition-all duration-300 ease-in-out" 
+             class:max-h-0={!showTokenHoldings} 
+             class:max-h-[600px]={showTokenHoldings}>
+          <div class="p-6">
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              {#each (pricesLoaded ? portfolio.filter(token => token.price > 0) : portfolio).sort((a, b) => b.value - a.value).slice(0, showAllTokens ? undefined : 8) as token}
+                <div class="flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200" 
+                     class:bg-gradient-to-r={token.value > 1000}
+                     class:from-green-50={token.value > 1000}
+                     class:to-green-100={token.value > 1000}
+                     class:border-green-200={token.value > 1000}>
+                  
+                  <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                      <span class="text-lg font-bold text-gray-900">{token.symbol}</span>
+                      <span class="px-2 py-1 rounded-md text-xs font-bold text-white"
+                            class:bg-blue-500={token.chain === 'eth'}
+                            class:bg-purple-500={token.chain === 'polygon'}
+                            class:bg-yellow-500={token.chain === 'bsc'}>
+                        {(token.chain || 'unknown').toUpperCase()}
+                      </span>
+                    </div>
+                    <div class="text-sm text-gray-600 font-medium">
+                      {token.balance.toLocaleString('en-US', { maximumFractionDigits: 6 })} tokens
+                    </div>
+                  </div>
+                  
+                  <div class="text-right">
+                    {#if token.price > 0}
+                      <div class="text-lg font-bold text-green-600">
+                        ${token.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        ${token.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} each
+                      </div>
+                    {:else}
+                      <div class="text-lg font-bold text-gray-400">--</div>
+                      <div class="text-xs text-gray-400">No price data</div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+              
+              {#if portfolio.length > 8}
+                <div class="text-center pt-2">
+                  <button 
+                    class="px-4 py-2 text-sm font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-300 rounded-lg transition-colors duration-200"
+                    on:click={() => showAllTokens = !showAllTokens}
+                  >
+                    {showAllTokens ? 'Show Less' : `View ${portfolio.length - 8} More Tokens`}
+                  </button>
+                </div>
+              {/if}
+            </div>
+          </div>
+        </div>
+      {/if}    </div>
+  </div>
 </div>
 
 <style>
-  .evm-address-balances {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  .control-buttons {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    margin: 1.5rem 0;
-    padding: 1rem;
-    background: var(--surface, #f8f9fa);
-    border-radius: 8px;
-    border: 1px solid var(--border, #e1e4e8);
-  }
-
-  .btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 120px;
-  }
-
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-primary {
-    background: var(--primary, #0066cc);
-    color: white;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: var(--primary-hover, #0052a3);
-  }
-
-  .btn-secondary {
-    background: var(--secondary, #6c757d);
-    color: white;
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: var(--secondary-hover, #545b62);
-  }
-
-  .btn.loading {
-    position: relative;
-    color: transparent;
-  }
-
-  .btn.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 16px;
-    height: 16px;
-    margin: -8px 0 0 -8px;
-    border: 2px solid transparent;
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  .cache-status {
-    display: flex;
-    gap: 0.5rem;
-    margin-left: auto;
-  }
-
-  .status-indicator {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-  .status-success {
-    background: var(--success-bg, #d4edda);
-    color: var(--success-text, #155724);
-    border: 1px solid var(--success-border, #c3e6cb);
-  }
-  .portfolio-section {
-    margin: 2rem 0;
-    background: white;
-    border-radius: 16px;
-    border: 1px solid var(--border, #e1e4e8);
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  }
-
-  .portfolio-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2rem 2.5rem;
-    background: linear-gradient(135deg, var(--surface, #f8f9fa) 0%, #ffffff 100%);
-    border-bottom: 1px solid var(--border, #e1e4e8);
-  }
-
-  .header-left {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .portfolio-header h3 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary, #1a1a1a);
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .total-tokens {
-    font-size: 0.875rem;
-    color: var(--text-muted, #6b7280);
-    font-weight: 500;
-  }
-  .total-value {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary, #1a1a1a);
-  }
-
-  .value-amount {
-    color: var(--text-primary, #1a1a1a);
-    font-weight: 700;
-  }
-
-  .portfolio-table {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .table-header {
-    display: grid;
-    grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1fr;
-    gap: 1rem;
-    padding: 1.25rem 2.5rem;
-    background: var(--surface-secondary, #f8fafc);
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--text-secondary, #475569);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 2px solid var(--border-light, #f1f5f9);
-  }
-  .table-body {
+  /* Minimal custom styles - most styling handled by Tailwind */
+  /* Smooth scroll for token list */
+  .max-h-96 {
     max-height: 400px;
-    overflow-y: auto;
-  }
-  .table-row {
-    display: grid;
-    grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1fr;
-    gap: 1rem;
-    padding: 1.5rem 2.5rem;
-    border-bottom: 1px solid var(--border-light, #f1f5f9);
-    transition: all 0.2s ease;
-  }
-
-  .table-row:hover {
-    background: var(--surface-hover, #f8fafc);
-  }
-
-  .col-token {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .token-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .token-symbol {
-    font-weight: 700;
-    font-size: 1.125rem;
-    color: var(--text-primary, #1a1a1a);
-  }
-
-  .contract-address {
-    font-size: 0.75rem;
-    color: var(--text-muted, #9ca3af);
-    font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
-    background: var(--surface, #f3f4f6);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    width: fit-content;
-  }
-
-  .col-balance,
-  .col-price,
-  .col-value {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    font-size: 1rem;
-  }
-
-  .balance-amount {
-    color: var(--text-primary, #1a1a1a);
-  }
-
-  .price-amount {
-    color: var(--text-primary, #1a1a1a);
-  }
-
-  .value-amount {
-    color: var(--success-text, #059669);
-    font-weight: 700;
-  }
-
-  .col-chain {
-    display: flex;
-    align-items: center;
-  }
-
-  .chain-badge {
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .chain-eth {
-    background: linear-gradient(135deg, #627eea, #4f46e5);
-    color: white;
-  }
-
-  .chain-polygon {
-    background: linear-gradient(135deg, #8247e5, #7c3aed);
-    color: white;
-  }
-
-  .chain-bsc {
-    background: linear-gradient(135deg, #f3ba2f, #eab308);
-    color: white;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
   }
   
-  .no-tokens {
-    text-align: center;
-    padding: 2rem;
-    color: var(--muted, #6c757d);
+  .max-h-96::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .max-h-96::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .max-h-96::-webkit-scrollbar-thumb {
+    background-color: rgb(203 213 225);
+    border-radius: 3px;
+  }
+  
+  .max-h-96::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(148 163 184);
+  }
+
+  /* Smooth transitions for expandable sections */
+  .max-h-0 {
+    max-height: 0;
+  }
+  
+  .max-h-\[600px\] {
+    max-height: 600px;
+  }
+
+  /* Rotate animation for chevron */
+  .rotate-180 {
+    transform: rotate(180deg);
   }
 </style>
