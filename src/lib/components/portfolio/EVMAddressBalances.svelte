@@ -522,7 +522,7 @@
 </script>
 
 <!-- Modern Two-Card Crypto Portfolio Widget -->
-<div class="w-full max-w-6xl mx-auto p-4 space-y-6">
+<div class="w-full max-w-2xl mx-auto p-4 space-y-6">
   <!-- Header Section -->
   <div class="text-center mb-6">
     <h1 class="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
@@ -534,9 +534,8 @@
         ${portfolio.reduce((sum, item) => sum + item.value, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </div>
       <div class="text-sm text-gray-500">{portfolio.length} tokens across {[...new Set(portfolio.map(t => t.chain))].length} chains</div>
-    {/if}
-  </div>  <!-- Single Connected Card Layout -->
-  <div class="max-w-4xl mx-auto">
+    {/if}  </div>  <!-- Single Connected Card Layout -->
+  <div class="max-w-2xl mx-auto">
     
     <!-- Main Card: Portfolio Management & Token Holdings -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
