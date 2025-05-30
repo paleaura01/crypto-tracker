@@ -1,6 +1,6 @@
 <script lang="ts">
   // Use components from the centralized lib structure
-  import { CBExchangeBalances, CBLoanSummary, PortfolioDisplay } from '$lib/components';
+  import { EVMAddressBalances, CBExchangeBalances, CBLoanSummary } from '$lib/components';
 
   import type {
     WalletAccount,
@@ -19,7 +19,7 @@
 
 <section class="p-4 space-y-8">
   <!-- Your on-chain one-off balances via Moralis -->
-  <PortfolioDisplay portfolio={[]} loading={false} error="" />
+  <EVMAddressBalances />
   
   <CBLoanSummary loans={loans} />
   

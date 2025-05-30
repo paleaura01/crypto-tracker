@@ -1,20 +1,26 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   
   export let address: string = '';
   export let loading: boolean = false;
   export let error: string = '';
   export let placeholder: string = 'Enter wallet address (0x...)';
   export let disabled: boolean = false;
-  
-  const dispatch = createEventDispatcher<{
+  export let showSaveButton: boolean = true;
+    const dispatch = createEventDispatcher<{
     submit: { address: string };
     clear: void;
     change: { address: string };
+    save: { address: string; label?: string | undefined };
   }>();
   
   let isValid = false;
-  
+  let saving = false;
+  let saveError = '';
+  let saveSuccess = false;
+  let addressLabel = '';
+  let showSaveForm = false;
+  let savedAddresses: Array<{ id: string; address: string; label?: string; blockchain: string }> = [];  
   // Validate Ethereum address format
   function validateAddress(addr: string): boolean {
     return /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -25,6 +31,8 @@
     const target = event.target as HTMLInputElement;
     address = target.value;
     isValid = validateAddress(address);
+    saveSuccess = false;
+    saveError = '';
     dispatch('change', { address });
   }
   
@@ -50,31 +58,144 @@
     address = '';
     error = '';
     isValid = false;
+    saveSuccess = false;
+    saveError = '';
+    showSaveForm = false;
     dispatch('clear');
   }
+  
+  // Show save form
+  function toggleSaveForm() {
+    showSaveForm = !showSaveForm;
+    saveError = '';
+    saveSuccess = false;
+    if (showSaveForm) {
+      addressLabel = '';
+    }
+  }
+  
+  // Save address to Supabase
+  async function saveAddress() {
+    if (!address.trim() || !isValid) {
+      saveError = 'Please enter a valid address first';
+      return;
+    }
+    
+    saving = true;
+    saveError = '';
+    saveSuccess = false;
+    
+    try {
+      const response = await fetch('/api/wallet/addresses/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: address.trim(),
+          label: addressLabel.trim() || null,
+          blockchain: 'ethereum'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save address');
+      }
+      
+      saveSuccess = true;
+      showSaveForm = false;
+      addressLabel = '';
+      dispatch('save', { 
+        address: address.trim(), 
+        label: addressLabel.trim() || undefined 
+      });
+      
+      // Refresh saved addresses
+      await loadSavedAddresses();
+      
+    } catch (err: unknown) {
+      saveError = err instanceof Error ? err.message : 'Failed to save address';
+    } finally {
+      saving = false;
+    }
+  }
+  
+  // Load saved addresses
+  async function loadSavedAddresses() {
+    try {
+      const response = await fetch('/api/wallet/addresses');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          savedAddresses = result.data;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load saved addresses:', err);
+    }
+  }
+  
+  // Load an address from saved list
+  function loadSavedAddress(savedAddress: string) {
+    address = savedAddress;
+    isValid = validateAddress(address);
+    dispatch('change', { address });
+  }
+  
+  // Remove saved address
+  async function removeSavedAddress(addressId: string) {
+    try {
+      const response = await fetch('/api/wallet/addresses', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ addressId })
+      });
+      
+      if (response.ok) {
+        await loadSavedAddresses();
+      }
+    } catch (err) {
+      console.error('Failed to remove address:', err);
+    }
+  }
+  
+    // Load saved addresses on component mount
+  onMount(() => {
+    if (showSaveButton) {
+      loadSavedAddresses();
+    }
+  });
   
   $: isValid = validateAddress(address);
 </script>
 
-<div class="address-input-container">
-  <form on:submit={handleSubmit} class="address-form">
-    <div class="input-group">
-      <div class="input-wrapper">
+<div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+  <form on:submit={handleSubmit} class="space-y-6">
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="flex-1 relative">        <label for="wallet-address-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Wallet Address
+        </label>
         <input
+          id="wallet-address-input"
           type="text"
           bind:value={address}
           on:input={handleInput}
           {placeholder}
           {disabled}
-          class="address-input"
-          class:valid={isValid && address}
-          class:invalid={address && !isValid}
+          class="w-full px-4 py-3 text-sm font-mono border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400
+            {isValid && address ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
+            {address && !isValid ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
+            {!address ? 'border-gray-300 dark:border-gray-600' : ''}"
         />
         {#if address}
           <button
             type="button"
             on:click={handleClear}
-            class="clear-button"
+            class="absolute right-3 top-10 w-6 h-6 bg-gray-400 hover:bg-gray-600 text-white rounded-full flex items-center justify-center text-xs transition-colors"
             title="Clear address"
             {disabled}
           >
@@ -83,205 +204,167 @@
         {/if}
       </div>
       
-      <button
-        type="submit"
-        class="submit-button"
-        disabled={loading || !isValid || disabled}
-      >
-        {#if loading}
-          <span class="loading-spinner"></span>
-          Loading...
-        {:else}
-          Get Balance
+      <div class="flex flex-col gap-3 lg:self-end">
+        <button
+          type="submit"
+          class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg disabled:hover:shadow-none flex items-center justify-center gap-2 whitespace-nowrap min-w-[140px]"
+          disabled={loading || !isValid || disabled}
+        >
+          {#if loading}
+            <div class="w-4 h-4 border-2 border-transparent border-t-white rounded-full animate-spin"></div>
+            Loading...
+          {:else}
+            🔍 Get Balance
+          {/if}
+        </button>
+        
+        {#if showSaveButton && isValid && address}
+          <button
+            type="button"
+            on:click={toggleSaveForm}
+            class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-lg flex items-center justify-center gap-2"
+            disabled={disabled}
+          >
+            💾 Save Address
+          </button>
         {/if}
-      </button>
+      </div>
     </div>
     
-    {#if error}
-      <div class="error-message" role="alert">
-        {error}
+    <!-- Status Messages -->
+    <div class="space-y-3">
+      {#if error}
+        <div class="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg">
+          <div class="flex items-center">
+            <span class="text-red-500 text-lg mr-2">❌</span>
+            <p class="text-red-800 dark:text-red-200 text-sm font-medium">{error}</p>
+          </div>
+        </div>
+      {/if}
+      
+      {#if saveSuccess}
+        <div class="p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-lg">
+          <div class="flex items-center">
+            <span class="text-green-500 text-lg mr-2">✅</span>
+            <p class="text-green-800 dark:text-green-200 text-sm font-medium">Address saved successfully!</p>
+          </div>
+        </div>
+      {/if}
+      
+      {#if address && isValid}
+        <div class="p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-lg">
+          <div class="flex items-center">
+            <span class="text-green-500 text-lg mr-2">✅</span>
+            <p class="text-green-800 dark:text-green-200 text-sm font-medium">Valid Ethereum address</p>
+          </div>
+        </div>
+      {:else if address && !isValid}
+        <div class="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg">
+          <div class="flex items-center">
+            <span class="text-red-500 text-lg mr-2">❌</span>
+            <p class="text-red-800 dark:text-red-200 text-sm font-medium">Invalid address format</p>
+          </div>
+        </div>
+      {/if}
+    </div>
+  </form>  
+  <!-- Save form -->
+  {#if showSaveForm}
+    <div class="mt-6 p-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-xl border border-blue-200 dark:border-gray-600">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-2xl">💾</span>
+        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Save Address</h4>
       </div>
-    {/if}
-    
-    {#if address && isValid}
-      <div class="validation-status success">
-        ✓ Valid Ethereum address
+      <div class="flex flex-col sm:flex-row gap-4">
+        <input
+          type="text"
+          bind:value={addressLabel}
+          placeholder="Optional label (e.g., 'My Main Wallet', 'Trading Account')"
+          class="flex-1 px-4 py-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:text-white dark:placeholder-gray-400"
+        />
+        <div class="flex gap-3">
+          <button
+            type="button"
+            on:click={saveAddress}
+            class="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+            disabled={saving}
+          >
+            {#if saving}
+              <div class="w-4 h-4 border-2 border-transparent border-t-white rounded-full animate-spin"></div>
+              Saving...
+            {:else}
+              ✅ Save
+            {/if}
+          </button>
+          <button
+            type="button"
+            on:click={toggleSaveForm}
+            class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
-    {:else if address && !isValid}
-      <div class="validation-status error">
-        ✗ Invalid address format
+      {#if saveError}
+        <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg">
+          <p class="text-red-600 dark:text-red-400 text-sm font-medium">❌ {saveError}</p>
+        </div>
+      {/if}
+    </div>
+  {/if}
+  
+  <!-- Saved addresses -->
+  {#if showSaveButton && savedAddresses.length > 0}
+    <div class="mt-8">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-2xl">📚</span>
+        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Saved Addresses</h4>
+        <span class="text-sm text-gray-500 dark:text-gray-400">({savedAddresses.length})</span>
       </div>
-    {/if}
-  </form>
+      <div class="grid gap-3 max-h-60 overflow-y-auto pr-2">
+        {#each savedAddresses as savedAddr (savedAddr.id)}
+          <div class="group p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-600 transition-all duration-200 hover:shadow-md">
+            <div class="flex items-center justify-between">
+              <button
+                type="button"
+                on:click={() => loadSavedAddress(savedAddr.address)}
+                class="flex-1 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    🏦
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {savedAddr.label || 'Unlabeled Address'}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1 break-all">
+                      {savedAddr.address}
+                    </p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
+                        {savedAddr.blockchain}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+              <button
+                type="button"
+                aria-label="Remove address"
+                on:click={() => removeSavedAddress(savedAddr.id)}
+                class="ml-3 p-2 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                title="Remove address"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </div>
 
-<style>
-  .address-input-container {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-  }
-  
-  .address-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .input-group {
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-  }
-  
-  .input-wrapper {
-    position: relative;
-    flex: 1;
-  }
-  
-  .address-input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-    transition: all 0.15s ease;
-  }
-  
-  .address-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-  
-  .address-input.valid {
-    border-color: #10b981;
-    background-color: #f0fdf4;
-  }
-  
-  .address-input.invalid {
-    border-color: #ef4444;
-    background-color: #fef2f2;
-  }
-  
-  .address-input:disabled {
-    background-color: #f9fafb;
-    color: #6b7280;
-    cursor: not-allowed;
-  }
-  
-  .clear-button {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #6b7280;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 1.5rem;
-    height: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: background-color 0.15s ease;
-  }
-  
-  .clear-button:hover:not(:disabled) {
-    background: #374151;
-  }
-  
-  .clear-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .submit-button {
-    padding: 0.75rem 1.5rem;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 500;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    white-space: nowrap;
-  }
-  
-  .submit-button:hover:not(:disabled) {
-    background: #2563eb;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
-  }
-  
-  .submit-button:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-  
-  .loading-spinner {
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid transparent;
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
-  .error-message {
-    padding: 0.75rem;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 6px;
-    color: #dc2626;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-  
-  .validation-status {
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-  
-  .validation-status.success {
-    background: #f0fdf4;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-  }
-  
-  .validation-status.error {
-    background: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-  }
-  
-  @media (max-width: 640px) {
-    .input-group {
-      flex-direction: column;
-    }
-    
-    .submit-button {
-      width: 100%;
-      justify-content: center;
-    }
-  }
-</style>
