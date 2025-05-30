@@ -514,10 +514,14 @@
   $: if (rawOnchain.length > 0) {
     computePortfolio();
   }
-
   // Auto-expand token holdings when portfolio is loaded
   $: if (portfolio.length > 0) {
     showTokenHoldings = true;
+  }
+
+  // Simple address validation
+  function isValidEthereumAddress(address: string): boolean {
+    return /^0x[a-fA-F0-9]{40}$/.test(address.trim());
   }
 </script>
 

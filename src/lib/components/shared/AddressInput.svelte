@@ -250,22 +250,6 @@
           </div>
         </div>
       {/if}
-      
-      {#if address && isValid}
-        <div class="p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-lg">
-          <div class="flex items-center">
-            <span class="text-green-500 text-lg mr-2">✅</span>
-            <p class="text-green-800 dark:text-green-200 text-sm font-medium">Valid Ethereum address</p>
-          </div>
-        </div>
-      {:else if address && !isValid}
-        <div class="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg">
-          <div class="flex items-center">
-            <span class="text-red-500 text-lg mr-2">❌</span>
-            <p class="text-red-800 dark:text-red-200 text-sm font-medium">Invalid address format</p>
-          </div>
-        </div>
-      {/if}
     </div>
   </form>  
   <!-- Save form -->
