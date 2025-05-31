@@ -4,9 +4,9 @@
   import { writable, derived, get } from 'svelte/store';
   
   // Import our new modular components
-  import MultiWalletHeader from '$lib/components/portfolio/MultiWalletHeader.svelte';
-  import WalletSection from '$lib/components/portfolio/WalletSection.svelte';
-  import OverrideManager from '$lib/components/portfolio/OverrideManager.svelte';
+  import MultiWalletHeader from '$lib/components/portfolio/evmultiwallet/MultiWalletHeader.svelte';
+  import WalletSection from '$lib/components/portfolio/evmultiwallet/WalletSection.svelte';
+  import OverrideManager from '$lib/components/portfolio/evmultiwallet/OverrideManager.svelte';
   import DebugPanel from '$lib/components/debug/DebugPanel.svelte';
     // Import types
   import type {
