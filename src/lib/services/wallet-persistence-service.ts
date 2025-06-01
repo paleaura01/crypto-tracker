@@ -82,8 +82,6 @@ export class WalletPersistenceService {
           user_id: user.id,
           settings_type: 'multi_wallet',
           settings_data: walletSaveData
-        }, {
-          onConflict: 'user_id, settings_type'
         })
         .select()
         .single();
@@ -148,9 +146,7 @@ export class WalletPersistenceService {
       const overridesData: GlobalOverridesData = {
         addressOverrides,
         symbolOverrides
-      };
-
-      const { data, error } = await supabase
+      };      const { data, error } = await supabase
         .from('wallet_settings')
         .upsert({
           user_id: user.id,

@@ -54,8 +54,8 @@
     wallet.expanded = !wallet.expanded;
     dispatch('updateWallet', wallet);
   }
-
   function loadBalances() {
+    console.log('[WalletSection] loadBalances called for wallet:', wallet.id, wallet.label || wallet.address);
     dispatch('loadBalances', wallet.id);
   }
 

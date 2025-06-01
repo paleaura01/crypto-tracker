@@ -58,16 +58,22 @@
       total + wallet.portfolio.reduce((sum, item) => sum + item.value, 0), 0
     );
   });
-
   const allUniqueTokenIds = derived(walletsStore, ($wallets) => {
     const tokenIds = new Set<string>();
+    addDebugEvent('TOKEN_ID_DERIVE', `Deriving token IDs from ${$wallets.length} wallets, coinList has ${coinList.length} coins`);
+    
     $wallets.forEach(wallet => {
+      addDebugEvent('TOKEN_ID_WALLET', `Processing wallet ${wallet.label || wallet.address} with ${wallet.rawOnchain.length} tokens`);
       wallet.rawOnchain.forEach(token => {
         const id = findCoinGeckoId(token.contract_address, token.symbol, wallet.id);
+        addDebugEvent('TOKEN_ID_LOOKUP', `Token ${token.symbol} (${token.contract_address}) -> ${id || 'NOT_FOUND'}`);
         if (id) tokenIds.add(id);
       });
     });
-    return Array.from(tokenIds).sort();
+    
+    const result = Array.from(tokenIds).sort();
+    addDebugEvent('TOKEN_ID_RESULT', `Found ${result.length} unique token IDs: [${result.join(', ')}]`);
+    return result;
   });
 
   // Reactive computed values
@@ -371,7 +377,6 @@
       await addWallet(legacyAddress, 'Migrated Wallet');
       addDebugEvent('LEGACY_MIGRATION', `Migrated legacy wallet: ${legacyAddress}`);
     }  }
-
   // Ensure coin list is available - loads from database with optional force refresh
   async function ensureCoinList(forceRefresh = false) {
     if (coinListLoading) return; // Prevent concurrent requests
@@ -393,10 +398,21 @@
         throw new Error(data.error || 'Failed to load coin list');
       }
       
-      // The API handles caching and database storage automatically
-      console.log(`Coin list loaded: ${data.data?.length || 0} coins`);
+      // Update the coinList variable with the loaded data
+      if (data.data && Array.isArray(data.data)) {
+        coinList = data.data;
+        addDebugEvent('COINLIST_LOADED', `Coin list loaded: ${coinList.length} coins available`);
+      } else {
+        throw new Error('Invalid coin list data format');
+      }
+      
+      // Clear any previous errors
+      coinListError = null;
       
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to load coin list';
+      coinListError = errorMsg;
+      addDebugEvent('COINLIST_ERROR', `Error loading coin list: ${errorMsg}`);
       console.error('Error loading coin list:', error);
       // Don't throw - let the app continue with cached data
     } finally {
@@ -502,12 +518,24 @@
       wallets.map((w: WalletData) => w.id === updatedWallet.id ? updatedWallet : w)
     );
   }
-
   // Individual wallet balance loading
   async function loadWalletBalances(walletId: string) {
+    addDebugEvent('LOAD_BALANCE_START', `loadWalletBalances called for wallet ID: ${walletId}`);
+    
     const wallets = get(walletsStore);
     const wallet = wallets.find((w: WalletData) => w.id === walletId);
-    if (!wallet || !wallet.address.trim()) return;
+    
+    if (!wallet) {
+      addDebugEvent('LOAD_BALANCE_ERROR', `Wallet not found with ID: ${walletId}`);
+      return;
+    }
+    
+    if (!wallet.address.trim()) {
+      addDebugEvent('LOAD_BALANCE_ERROR', `Wallet ${wallet.label || walletId} has no address set`);
+      return;
+    }
+
+    addDebugEvent('LOAD_BALANCE_PROCEED', `Loading balances for wallet: ${wallet.label || wallet.address} (${wallet.address})`);
 
     // Update loading state
     wallet.loadingBalances = true;
@@ -541,13 +569,21 @@
       wallet.loadingBalances = false;
       updateWallet(wallet);
     }
-  }
-
-  // Global price loading for all wallets
+  }  // Global price loading for all wallets
   async function loadAllPrices() {
+    console.log('EVMAddressBalances: loadAllPrices function called');
+    addDebugEvent('LOAD_ALL_PRICES_START', 'Load All Prices button triggered - starting price loading');
+    
+    // Ensure coin list is loaded before trying to find token IDs
+    await ensureCoinList();
+    addDebugEvent('LOAD_ALL_PRICES_COINLIST', `Coin list ensured - ${coinList.length} coins available`);
+    
     const tokenIds = get(allUniqueTokenIds);
+    addDebugEvent('LOAD_ALL_PRICES_TOKEN_CHECK', `Found ${tokenIds.length} unique token IDs after coin list check`);
+    
     if (tokenIds.length === 0) {
       error = 'No tokens found across all wallets';
+      addDebugEvent('LOAD_ALL_PRICES_ERROR', 'No tokens found across all wallets');
       return;
     }
 
@@ -618,13 +654,15 @@
       }
     }
   }
-
   // Enhanced CoinGecko ID finder with wallet-specific overrides
   function findCoinGeckoId(contractAddress: string, symbol: string, walletId?: string): string | null {
+    addDebugEvent('FIND_COINGECKO_START', `Looking for CoinGecko ID: ${symbol} (${contractAddress}), coinList length: ${coinList.length}`);
+    
     // Check wallet-specific overrides first
     if (walletId) {
       const wallet = get(walletsStore).find((w: WalletData) => w.id === walletId);
       if (wallet?.addressOverrides[contractAddress]) {
+        addDebugEvent('FIND_COINGECKO_WALLET_OVERRIDE', `Found wallet override for ${contractAddress}: ${wallet.addressOverrides[contractAddress]}`);
         return wallet.addressOverrides[contractAddress];
       }
     }
@@ -632,6 +670,7 @@
     // Check global overrides
     const globalAddrOverrides = get(globalAddressOverrides);
     if (globalAddrOverrides[contractAddress]) {
+      addDebugEvent('FIND_COINGECKO_GLOBAL_OVERRIDE', `Found global override for ${contractAddress}: ${globalAddrOverrides[contractAddress]}`);
       return globalAddrOverrides[contractAddress];
     }
 
@@ -640,6 +679,7 @@
       if (coin.platforms) {
         const addresses = Object.values(coin.platforms);
         if (addresses.some((addr: any) => addr && addr.toLowerCase() === contractAddress.toLowerCase())) {
+          addDebugEvent('FIND_COINGECKO_PLATFORM_MATCH', `Found platform match for ${contractAddress}: ${coin.id}`);
           return coin.id;
         }
       }
@@ -649,7 +689,14 @@
     const symbolMatch = coinList.find(coin => 
       coin.symbol.toLowerCase() === symbol.toLowerCase()
     );
-    return symbolMatch?.id || null;
+    
+    if (symbolMatch?.id) {
+      addDebugEvent('FIND_COINGECKO_SYMBOL_MATCH', `Found symbol match for ${symbol}: ${symbolMatch.id}`);
+      return symbolMatch.id;
+    }
+    
+    addDebugEvent('FIND_COINGECKO_NO_MATCH', `No CoinGecko ID found for ${symbol} (${contractAddress})`);
+    return null;
   }
 
   // Enhanced symbol getter with wallet-specific overrides
@@ -946,6 +993,7 @@
         on:updateWallet={(e) => updateWallet(e.detail)}
         on:removeWallet={(e) => removeWallet(e.detail)}
         on:loadBalances={(e) => loadWalletBalances(e.detail)}
+        on:addressSubmit={(e) => loadWalletBalances(e.detail.walletId)}
         on:addressSave={handleAddressSave}
       />
     {/each}

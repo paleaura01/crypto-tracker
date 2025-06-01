@@ -11,11 +11,12 @@
     addWallet: void;
     loadAllPrices: void;
   }>();
-
   function addWallet() {
+    console.log('MultiWalletHeader: Add wallet button clicked');
     dispatch('addWallet');
   }
   function loadAllPrices() {
+    console.log('MultiWalletHeader: Load All Prices button clicked');
     dispatch('loadAllPrices');
   }
 
