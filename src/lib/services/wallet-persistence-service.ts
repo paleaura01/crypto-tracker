@@ -82,7 +82,7 @@ export class WalletPersistenceService {
           user_id: user.id,
           settings_type: 'multi_wallet',
           settings_data: walletSaveData
-        })
+        }, { onConflict: 'user_id,settings_type' })
         .select()
         .single();
 
@@ -152,7 +152,7 @@ export class WalletPersistenceService {
           user_id: user.id,
           settings_type: 'global_overrides',
           settings_data: overridesData
-        })
+        }, { onConflict: 'user_id,settings_type' })
         .select()
         .single();
 

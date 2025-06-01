@@ -425,10 +425,10 @@
     // Only load coinlist automatically, no wallet data
     await ensureCoinList();
   }
-
   // Check for cached data
   async function checkCachedData() {
     const currentWallets = get(walletsStore);
+    let hasLoadedBalances = false;
     
     for (const wallet of currentWallets) {
       if (!wallet.address.trim()) continue;
@@ -440,6 +440,7 @@
         wallet.rawOnchain = rawItem.data;
         wallet.balancesLoaded = true;
         wallet.lastUpdated = new Date(rawItem.timestamp);
+        hasLoadedBalances = true;
         addDebugEvent('LOCAL_BALANCES_LOADED', `Loaded cached balances for wallet ${wallet.label || wallet.address}`);
       }
     }
@@ -456,6 +457,12 @@
         globalPriceStore.set(priceItem.data);
         addDebugEvent('LOCAL_PRICES_LOADED', 'Loaded cached prices for all wallets');
       }
+    }
+    
+    // Important: Compute portfolios for wallets with loaded balances
+    if (hasLoadedBalances) {
+      addDebugEvent('PORTFOLIO_INIT', 'Computing portfolios from cached data');
+      await recomputeAllPortfolios();
     }
   }
   // Multi-wallet management functions
