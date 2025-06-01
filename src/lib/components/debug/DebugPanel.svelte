@@ -13,6 +13,11 @@
   export let coinListLoading: boolean = false;
   export let coinListError: string | null = null;
   export let balancesLoading: boolean = false;
+  
+  // Debug logging to verify what we're receiving
+  $: if (debugInfo.streamEvents) {
+    console.log(`[DebugPanel] Received ${debugInfo.streamEvents.length} stream events:`, debugInfo.streamEvents);
+  }
 
   // Events
   const dispatch = createEventDispatcher<{
@@ -20,11 +25,23 @@
     refreshBalances: void;
     clearDebugEvents: void;
     exportDebugData: void;
+    migrateToDatabase: void;
+    clearDatabaseData: void;
+    loadFromDatabase: void;
   }>();
-
   // Local state
   let showPerformance = false;
-  let showStreamEvents = false;
+  let showStreamEvents = true; // Show events by default since they're critical for debugging
+  
+  // Add debugging to see what debugInfo contains
+  $: {
+    console.log('DebugPanel - debugInfo:', debugInfo);
+    console.log('DebugPanel - streamEvents:', debugInfo.streamEvents);
+    console.log('DebugPanel - streamEvents length:', debugInfo.streamEvents?.length);
+    console.log('DebugPanel - streamEvents type:', typeof debugInfo.streamEvents);
+    console.log('DebugPanel - streamEvents is array:', Array.isArray(debugInfo.streamEvents));
+  }
+
   // Debug stream event formatting
   function formatDebugEvent(event: { timestamp: string | number; type: string; message: string }) {
     const timestamp = typeof event.timestamp === 'string' 
@@ -93,15 +110,82 @@
           {debugInfo.cacheStatus?.healthy ? '✅ Healthy' : '⚠️ Issues'}
         </span>
       </div>
-      
-      <div class="status-item">
+        <div class="status-item">
         <span class="status-label">Environment:</span>
         <span class="status-value active">
           {import.meta.env.DEV ? '🛠️ Development' : '🚀 Production'}
         </span>
       </div>
+      
+      {#if debugInfo.authStatus}
+        <div class="status-item">
+          <span class="status-label">Authentication:</span>
+          <span class="status-value {debugInfo.authStatus.isAuthenticated ? 'active' : 'inactive'}">
+            {debugInfo.authStatus.isAuthenticated ? '🔐 Authenticated' : '🔓 Guest Mode'}
+          </span>
+        </div>
+        
+        {#if debugInfo.authStatus.userEmail}
+          <div class="status-item">
+            <span class="status-label">User:</span>
+            <span class="status-value active">
+              {debugInfo.authStatus.userEmail}
+            </span>
+          </div>
+        {/if}
+        
+        <div class="status-item">
+          <span class="status-label">Local Data:</span>
+          <span class="status-value {debugInfo.authStatus.hasLocalData ? 'warning' : 'inactive'}">
+            {debugInfo.authStatus.hasLocalData ? '⚠️ Has Local Data' : '✅ No Local Data'}
+          </span>
+        </div>
+      {/if}
     </div>
   </div>
+
+  <!-- Data Migration Section -->
+  {#if debugInfo.authStatus}
+    <div class="debug-section">
+      <h4 class="debug-section-title">Data Management</h4>
+      <div class="migration-controls">
+        {#if debugInfo.authStatus.isAuthenticated}
+          {#if debugInfo.authStatus.hasLocalData}
+            <button
+              type="button"
+              on:click={() => dispatch('migrateToDatabase')}
+              class="btn-debug btn-primary"
+              title="Migrate localStorage data to Supabase database"
+            >
+              📤 Migrate to Database
+            </button>
+          {/if}
+          
+          <button
+            type="button"
+            on:click={() => dispatch('clearDatabaseData')}
+            class="btn-debug btn-danger"
+            title="Clear all wallet data from database"
+          >
+            🗑️ Clear Database
+          </button>
+          
+          <button
+            type="button"
+            on:click={() => dispatch('loadFromDatabase')}
+            class="btn-debug btn-secondary"
+            title="Reload wallet data from database"
+          >
+            🔄 Reload from DB
+          </button>        {:else}          <div class="migration-warning">
+            <p class="text-sm text-gray-600">
+              🔒 Log in to access database persistence and migration features
+            </p>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
 
   <!-- Performance Metrics -->
   {#if debugInfo.performanceMetrics}
@@ -157,20 +241,25 @@
       >
         {showStreamEvents ? '📋' : '📝'}
       </button>
-    </div>
-    
-    {#if showStreamEvents}
-      <div class="events-container">        {#if debugInfo.streamEvents && debugInfo.streamEvents.length > 0}
-          {#each debugInfo.streamEvents.slice(-10) as event, index (event.timestamp || index)}
-            <div class="event-item {event.type.toLowerCase()}">
+    </div>      {#if showStreamEvents}
+      <div class="events-container">
+        <!-- Debug info display -->
+        <div class="event-item info">
+          DEBUG: streamEvents = {JSON.stringify(debugInfo.streamEvents)}
+        </div>
+        <div class="event-item info">
+          DEBUG: streamEvents length = {debugInfo.streamEvents?.length || 'undefined'}
+        </div>
+        <div class="event-item info">
+          DEBUG: streamEvents type = {typeof debugInfo.streamEvents}
+        </div>
+        
+        {#if debugInfo.streamEvents && debugInfo.streamEvents.length > 0}
+          {#each debugInfo.streamEvents as event, index (event.timestamp || index)}
+            <div class="event-item {event.type.toLowerCase().replace('_', '-')}">
               {formatDebugEvent(event)}
             </div>
           {/each}
-          {#if debugInfo.streamEvents.length > 10}
-            <div class="event-item info">
-              ... and {debugInfo.streamEvents.length - 10} more events
-            </div>
-          {/if}
         {:else}
           <div class="event-item info">
             No debug events logged yet
@@ -211,8 +300,7 @@
           Refreshing...
         {:else}
           🔄 Refresh Coin List
-        {/if}
-      </button>
+        {/if}      </button>
     </div>
     
     {#if coinListError}
@@ -272,9 +360,32 @@
     background-color: #6b7280;
     color: white;
   }
-
   .btn-secondary:hover {
     background-color: #4b5563;
+  }
+
+  .btn-danger {
+    background-color: #dc2626;
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background-color: #b91c1c;
+  }
+
+  .migration-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .migration-warning {
+    padding: 0.75rem;
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 0.25rem;
+    color: #92400e;
   }
 
   .debug-section {
@@ -386,9 +497,8 @@
     font-weight: 600;
     color: #1f2937;
   }
-
   .events-container {
-    max-height: 12rem;
+    max-height: 20rem;
     overflow-y: auto;
     background-color: white;
     border: 1px solid #d1d5db;
@@ -406,20 +516,36 @@
   .event-item:last-child {
     border-bottom: none;
   }
-
-  .event-item.save_start {
+  .event-item.save-start {
     color: #2563eb;
   }
 
-  .event-item.save_complete {
+  .event-item.save-complete {
     color: #059669;
   }
 
-  .event-item.save_error {
+  .event-item.save-error {
     color: #dc2626;
   }
 
-  .event-item.refresh_detected {
+  .event-item.db-error {
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  .event-item.wallet-added {
+    color: #059669;
+  }
+
+  .event-item.balances-loaded {
+    color: #059669;
+  }
+
+  .event-item.portfolio-computed {
+    color: #2563eb;
+  }
+
+  .event-item.refresh-detected {
     color: #ea580c;
   }
 

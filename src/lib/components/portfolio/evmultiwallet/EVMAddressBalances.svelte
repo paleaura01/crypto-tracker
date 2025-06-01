@@ -2,11 +2,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { writable, derived, get } from 'svelte/store';
-  
-  // Import our new modular components
+    // Import our new modular components
   import MultiWalletHeader from '$lib/components/portfolio/evmultiwallet/MultiWalletHeader.svelte';
   import WalletSection from '$lib/components/portfolio/evmultiwallet/WalletSection.svelte';
-  import OverrideManager from '$lib/components/portfolio/evmultiwallet/OverrideManager.svelte';
   import DebugPanel from '$lib/components/debug/DebugPanel.svelte';
     // Import types
   import type {
@@ -18,11 +16,13 @@
     CoinListEntry,
     GlobalPriceResp
   } from '$lib/components/types';
+  // Import wallet persistence service
+  import { walletPersistenceService } from '$lib/services/wallet-persistence-service';
+  import { supabaseMCPWalletService } from '$lib/services/supabase-mcp-wallet-service';
+  import { authService } from '$lib/services/auth-service';
+  import { supabase } from '$lib/supabaseClient';
 
-  // STORAGE KEYS
-  const WALLET_LIST_KEY = 'multi-wallet-list';
-  const GLOBAL_ADDR_OVR_KEY = 'globalAddressOverrides';
-  const GLOBAL_SYMBOL_OVR_KEY = 'globalSymbolOverrides';
+  // STORAGE KEYS (for cache data only - user data will be in Supabase)
   const BALANCE_CACHE_PREFIX = 'wallet-balances-';
   const PRICE_CACHE_PREFIX = 'price-data-';
 
@@ -30,13 +30,15 @@
   const walletsStore = writable<WalletData[]>([]);
   const globalPriceStore = writable<GlobalPriceResp>(null);
   const globalAddressOverrides = writable<OverrideMap>({});
-  const globalSymbolOverrides = writable<OverrideMap>({});
+  const globalSymbolOverrides = writable<OverrideMap>({});  // Authentication state
+  let isAuthenticated = false;
+  let authUser: any = null;
 
-  // Component state variables
+// Component state variables
   let error = '';
   let coinListError: string | null = null;
+  let coinListLoading = false;
   let loadingPrices = false;
-  let showAdvancedCard = false;
   let coinList: CoinListEntry[] = [];
   let debugEvents: DebugEvent[] = [];
   let refreshDetector: number | null = null;
@@ -46,6 +48,9 @@
     cacheHits: 0,
     cacheAttempts: 0
   };
+  // Database data status tracking
+  let hasDatabaseDataValue = false;
+  let isInitializing = true; // Flag to prevent saving during startup
 
   // Derived stores for computed values
   const totalPortfolioValue = derived([walletsStore], ([$wallets]) => {
@@ -70,19 +75,69 @@
   $: walletsCount = wallets.length;
   $: tokensCount = wallets.reduce((sum, w) => sum + w.portfolio.length, 0);
   $: chainsCount = new Set(wallets.flatMap(w => w.portfolio.map((p: any) => p.chain))).size;
-  $: pricesLoaded = $globalPriceStore && typeof $globalPriceStore === 'object' && !('error' in $globalPriceStore) ? true : false;
-  // Debug info aggregator
-  $: debugInfo = {
+  $: pricesLoaded = $globalPriceStore && typeof $globalPriceStore === 'object' && !('error' in $globalPriceStore) ? true : false;  // Debug info aggregator for DebugPanel
+  $: debugPanelInfo = {
     refreshDetector,
-    streamEvents: debugEvents,
+    streamEvents: [...debugEvents], // Create new array to ensure reactivity
     cacheStatus: {
       healthy: !coinListError && coinList.length > 0,
       lastUpdate: coinList.length ? new Date().toISOString() : undefined,
       errors: coinListError ? [coinListError] : []
     } as CacheStatus,
-    performanceMetrics
-  };// Initialize component
+    performanceMetrics,
+    authStatus: {
+      isAuthenticated,
+      userEmail: authUser?.email || null,
+      hasLocalData: hasLocalStorageData(),
+      hasDatabaseData: hasDatabaseDataValue
+    }
+  };
+  
+  // Add debug logging to see what's being passed to DebugPanel
+  $: {
+    console.log('Debug Panel Info - streamEvents:', debugPanelInfo.streamEvents);
+    console.log('Debug Panel Info - streamEvents length:', debugPanelInfo.streamEvents?.length);
+    console.log('Debug Panel Info - debugEvents array:', debugEvents);
+    console.log('Debug Panel Info - debugEvents length:', debugEvents.length);
+  }
+
+  // Check if user has data in the database
+  async function hasDatabaseData(): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      
+      return await walletPersistenceService.hasUserData(user.id);
+    } catch (error) {
+      console.error('Error checking database data:', error);
+      return false;
+    }
+  }
+
+  // Update database data status
+  async function updateDatabaseDataStatus() {
+    hasDatabaseDataValue = await hasDatabaseData();
+  }
+  // Check if localStorage has wallet data
+  function hasLocalStorageData(): boolean {
+    try {
+      const walletData = localStorage.getItem('multi-wallet-list');
+      const addrOverrides = localStorage.getItem('globalAddressOverrides');
+      const symOverrides = localStorage.getItem('globalSymbolOverrides');
+      
+      return !!(walletData && walletData !== '[]') || 
+             !!(addrOverrides && addrOverrides !== '{}') || 
+             !!(symOverrides && symOverrides !== '{}');    } catch {
+      return false;
+    }
+  }
+
+// Initialize component
   onMount(async () => {
+    // Add test debug event immediately to verify debug events are working
+    addDebugEvent('TEST_EVENT', 'Debug events test - this should appear in debug panel');
+    addDebugEvent('STREAM_TEST', 'Testing debug event streaming to logs/debug-stream.log');
+    
     const startTime = performance.now();
     
     // Set up debugging and monitoring
@@ -96,41 +151,194 @@
     
     // After coin list is available, apply any cached data
     await checkCachedData();
-    
-    // Track performance
+      // Track performance
     performanceMetrics.loadTime = Math.round(performance.now() - startTime);
     addDebugEvent('INIT_COMPLETE', `Multi-wallet component initialized in ${performanceMetrics.loadTime}ms`);
+    
+    // Allow wallet saves after initialization is complete
+    isInitializing = false;
+    addDebugEvent('INIT_READY', 'Wallet persistence enabled - ready to save user changes');
   });
-
   // Set up debug infrastructure
   function setupDebugInfrastructure() {
     refreshDetector = setupSimpleRefreshDetection();
-    
-    // Subscribe to override changes for localStorage backup
-    globalAddressOverrides.subscribe(m => {
-      localStorage.setItem(GLOBAL_ADDR_OVR_KEY, JSON.stringify(m));
+      // Subscribe to override changes for database persistence
+    let saveOverridesTimeout: NodeJS.Timeout;    globalAddressOverrides.subscribe(async (addressOverrides) => {
+      if (!isAuthenticated) {
+        addDebugEvent('DB_SKIP', 'Address overrides changed but user not authenticated - skipping save');
+        return;
+      }
+      
+      // Debounce save operations
+      clearTimeout(saveOverridesTimeout);
+      saveOverridesTimeout = setTimeout(async () => {
+        addDebugEvent('DB_SAVE_START', 'Starting global address overrides save operation');
+        const symbolOverrides = get(globalSymbolOverrides);
+        const result = await walletPersistenceService.saveGlobalOverrides(addressOverrides, symbolOverrides);
+        if (result.success) {
+          addDebugEvent('DB_SAVE', 'Global address overrides saved to database');
+        } else {
+          addDebugEvent('DB_ERROR', `Failed to save address overrides: ${result.error}`);
+        }
+      }, 1000);
     });
-    
-    globalSymbolOverrides.subscribe(m => {
-      localStorage.setItem(GLOBAL_SYMBOL_OVR_KEY, JSON.stringify(m));
-    });
-
-    // Subscribe to wallet changes for persistence
-    walletsStore.subscribe(wallets => {
-      const walletSaveData = wallets.map(w => ({
-        id: w.id,
-        address: w.address,
-        label: w.label,
-        expanded: w.expanded,
-        addressOverrides: w.addressOverrides,
-        symbolOverrides: w.symbolOverrides
-      }));
-      localStorage.setItem(WALLET_LIST_KEY, JSON.stringify(walletSaveData));
+      globalSymbolOverrides.subscribe(async (symbolOverrides) => {
+      if (!isAuthenticated) {
+        addDebugEvent('DB_SKIP', 'Symbol overrides changed but user not authenticated - skipping save');
+        return;
+      }
+      
+      // Debounce save operations
+      clearTimeout(saveOverridesTimeout);
+      saveOverridesTimeout = setTimeout(async () => {
+        addDebugEvent('DB_SAVE_START', 'Starting global symbol overrides save operation');
+        const addressOverrides = get(globalAddressOverrides);
+        const result = await walletPersistenceService.saveGlobalOverrides(addressOverrides, symbolOverrides);
+        if (result.success) {
+          addDebugEvent('DB_SAVE', 'Global symbol overrides saved to database');
+        } else {
+          addDebugEvent('DB_ERROR', `Failed to save symbol overrides: ${result.error}`);
+        }
+      }, 1000);
+    });// Subscribe to wallet changes for database persistence
+    let saveWalletsTimeout: NodeJS.Timeout;    walletsStore.subscribe(async (wallets) => {
+      if (!isAuthenticated) {
+        addDebugEvent('DB_SKIP', `Wallets changed (${wallets.length} wallets) but user not authenticated - skipping save`);
+        return;
+      }
+      
+      // Don't save during initialization to prevent empty wallet arrays
+      if (isInitializing) {
+        addDebugEvent('DB_SKIP', `Wallets changed during initialization (${wallets.length} wallets) - skipping save`);
+        return;
+      }
+      
+      // Debounce save operations
+      clearTimeout(saveWalletsTimeout);
+      saveWalletsTimeout = setTimeout(async () => {
+        addDebugEvent('DB_SAVE_START', `Starting wallet configuration save operation (${wallets.length} wallets)`);
+        const result = await walletPersistenceService.saveWalletConfiguration(wallets);
+        if (result.success) {
+          addDebugEvent('DB_SAVE', `Wallet configuration saved to database (${wallets.length} wallets)`);
+        } else {
+          addDebugEvent('DB_ERROR', `Failed to save wallet configuration: ${result.error}`);
+        }
+      }, 1000);
     });
   }
-
-  // Restore application state from localStorage
+  // Restore application state from Supabase database
   async function restoreApplicationState() {
+    // Check authentication status
+    const sessionResult = await authService.getCurrentSession();    if (sessionResult.success && sessionResult.data) {      isAuthenticated = true;
+      authUser = sessionResult.data.user;
+      addDebugEvent('AUTH_CHECK', `User authenticated: ${authUser.email}`);
+      
+      // Update database data status
+      await updateDatabaseDataStatus();
+      
+      // Load from database
+      await loadFromDatabase();
+    } else {
+      isAuthenticated = false;
+      addDebugEvent('AUTH_CHECK', 'User not authenticated - using fallback to localStorage');
+      
+      // Update database data status
+      await updateDatabaseDataStatus();
+      
+      // Fallback to localStorage for unauthenticated users
+      await loadFromLocalStorage();
+    }
+  }  // Load wallet data from Supabase database using MCP service
+  async function loadFromDatabase() {
+    try {      // Load global overrides
+      const overridesResult = await walletPersistenceService.loadGlobalOverrides();
+      if (overridesResult.success) {
+        const overridesData = overridesResult.data as { addressOverrides: OverrideMap; symbolOverrides: OverrideMap };
+        globalAddressOverrides.set(overridesData.addressOverrides);
+        globalSymbolOverrides.set(overridesData.symbolOverrides);
+        addDebugEvent('DB_LOAD', 'Global overrides loaded from database');
+      }      // Load wallet configuration from wallet_settings table
+      const walletResult = await walletPersistenceService.loadWalletConfiguration();
+      let restoredWallets: WalletData[] = [];
+      
+      if (walletResult.success && walletResult.data) {
+        const walletData = walletResult.data as { wallets: any[] };
+        if (walletData.wallets && walletData.wallets.length > 0) {
+          restoredWallets = walletData.wallets.map((saved: any) => ({
+            id: saved.id,
+            address: saved.address || '',
+            label: saved.label || '',
+            rawOnchain: [],
+            portfolio: [],
+            loadingBalances: false,
+            balancesLoaded: false,
+            error: '',
+            addressOverrides: saved.addressOverrides || {},
+            symbolOverrides: saved.symbolOverrides || {},
+            expanded: saved.expanded !== false
+          }));
+          addDebugEvent('DB_LOAD', `Loaded ${restoredWallets.length} wallets from wallet_settings`);
+        }
+      }
+
+      // Load wallet addresses using MCP service (replaces API call)
+      try {
+        addDebugEvent('DB_LOAD_START', 'Loading wallet addresses via MCP service');
+        const addressResult = await supabaseMCPWalletService.getWalletAddresses();
+        
+        if (addressResult.success && addressResult.data) {
+          const savedAddresses = addressResult.data;
+          const existingAddresses = new Set(restoredWallets.map(w => w.address.toLowerCase()));
+          
+          // Create wallet entries for addresses that don't already exist
+          const newWallets: WalletData[] = savedAddresses
+            .filter((addr: any) => addr.address && !existingAddresses.has(addr.address.toLowerCase()))
+            .map((addr: any) => ({
+              id: `wallet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              address: addr.address,
+              label: addr.label || `Wallet ${addr.address.slice(0, 8)}...`,
+              rawOnchain: [],
+              portfolio: [],
+              loadingBalances: false,
+              balancesLoaded: false,
+              error: '',
+              addressOverrides: {},
+              symbolOverrides: {},
+              expanded: true
+            }));
+          
+          if (newWallets.length > 0) {
+            restoredWallets = [...restoredWallets, ...newWallets];
+            addDebugEvent('DB_LOAD', `Added ${newWallets.length} wallets from MCP wallet_addresses query`);
+          }
+        } else {
+          addDebugEvent('DB_LOAD', 'No wallet addresses found via MCP service');
+        }
+      } catch (error: any) {
+        addDebugEvent('DB_ERROR', `Failed to load addresses via MCP: ${error.message}`);
+      }
+
+      if (restoredWallets.length > 0) {
+        walletsStore.set(restoredWallets);
+        addDebugEvent('DB_LOAD', `Total restored wallets via MCP: ${restoredWallets.length}`);
+      } else {
+        addDebugEvent('DB_LOAD', 'No wallets found in database via MCP');
+      }
+      
+    } catch (error: any) {
+      addDebugEvent('DB_ERROR', `Failed to load from database via MCP: ${error.message}`);
+      // Fallback to localStorage on error
+      await loadFromLocalStorage();
+    }
+  }
+
+  // Fallback: Load wallet data from localStorage
+  async function loadFromLocalStorage() {
+    // Legacy storage keys for fallback
+    const WALLET_LIST_KEY = 'multi-wallet-list';
+    const GLOBAL_ADDR_OVR_KEY = 'globalAddressOverrides';
+    const GLOBAL_SYMBOL_OVR_KEY = 'globalSymbolOverrides';
+    
     // Load global overrides
     const globalAddrOverrides = JSON.parse(localStorage.getItem(GLOBAL_ADDR_OVR_KEY) || '{}');
     const globalSymOverrides = JSON.parse(localStorage.getItem(GLOBAL_SYMBOL_OVR_KEY) || '{}');
@@ -139,7 +347,8 @@
 
     // Load wallet list
     const savedWallets = JSON.parse(localStorage.getItem(WALLET_LIST_KEY) || '[]');
-    if (savedWallets.length > 0) {      const restoredWallets: WalletData[] = savedWallets.map((saved: any) => ({
+    if (savedWallets.length > 0) {
+      const restoredWallets: WalletData[] = savedWallets.map((saved: any) => ({
         id: saved.id,
         address: saved.address || '',
         label: saved.label,
@@ -150,7 +359,7 @@
         error: '',
         addressOverrides: saved.addressOverrides || {},
         symbolOverrides: saved.symbolOverrides || {},
-        expanded: saved.expanded !== false // Default to expanded
+        expanded: saved.expanded !== false
       }));
       walletsStore.set(restoredWallets);
       addDebugEvent('WALLETS_RESTORED', `Restored ${restoredWallets.length} wallets from localStorage`);
@@ -161,10 +370,41 @@
     if (legacyAddress && savedWallets.length === 0) {
       await addWallet(legacyAddress, 'Migrated Wallet');
       addDebugEvent('LEGACY_MIGRATION', `Migrated legacy wallet: ${legacyAddress}`);
+    }  }
+
+  // Ensure coin list is available - loads from database with optional force refresh
+  async function ensureCoinList(forceRefresh = false) {
+    if (coinListLoading) return; // Prevent concurrent requests
+    
+    try {
+      coinListLoading = true;
+      
+      // Build URL with force refresh parameter if needed
+      const url = forceRefresh ? '/api/coinlist?force=true' : '/api/coinlist';
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch coin list: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load coin list');
+      }
+      
+      // The API handles caching and database storage automatically
+      console.log(`Coin list loaded: ${data.data?.length || 0} coins`);
+      
+    } catch (error) {
+      console.error('Error loading coin list:', error);
+      // Don't throw - let the app continue with cached data
+    } finally {
+      coinListLoading = false;
     }
   }
 
-  // Initialize core data
+  // Initialize data on component mount
   async function initializeData() {
     // Only load coinlist automatically, no wallet data
     await ensureCoinList();
@@ -222,11 +462,39 @@
     walletsStore.update(wallets => [...wallets, newWallet]);
     addDebugEvent('WALLET_ADDED', `Added wallet: ${label || address || 'Empty wallet'}`);
     return walletId;
-  }
+  }  async function removeWallet(walletId: string) {
+    const wallets = get(walletsStore);
+    const wallet = wallets.find((w: WalletData) => w.id === walletId);
+    
+    if (!wallet) {
+      addDebugEvent('WALLET_REMOVE_ERROR', `Wallet not found: ${walletId}`);
+      return;
+    }
 
-  function removeWallet(walletId: string) {
+    // If authenticated and wallet has an address, remove from database using MCP service
+    if (isAuthenticated && wallet.address.trim()) {
+      try {
+        addDebugEvent('WALLET_REMOVE_START', `Removing wallet from database via MCP: ${wallet.label || wallet.address}`);
+          // Use MCP service for direct database access
+        const result = await supabaseMCPWalletService.deleteWalletAddress(wallet.id, wallet.address.trim());
+
+        if (result.success) {
+          addDebugEvent('WALLET_REMOVE_SUCCESS', `Successfully removed wallet from database via MCP: ${wallet.label || wallet.address}`);
+        } else {
+          throw new Error(result.error || 'MCP service failed to remove wallet');
+        }
+        
+      } catch (error: any) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to remove wallet from database via MCP';
+        addDebugEvent('WALLET_REMOVE_ERROR', `Database removal via MCP failed for wallet ${walletId}: ${errorMessage}`);
+        console.error('Wallet removal error via MCP:', error);
+        // Continue with local removal even if database removal fails
+      }
+    }
+
+    // Remove from local store
     walletsStore.update((wallets: WalletData[]) => wallets.filter((w: WalletData) => w.id !== walletId));
-    addDebugEvent('WALLET_REMOVED', `Removed wallet: ${walletId}`);
+    addDebugEvent('WALLET_REMOVED', `Removed wallet locally: ${wallet.label || wallet.address || walletId}`);
   }
 
   function updateWallet(updatedWallet: WalletData) {
@@ -414,53 +682,250 @@
       addDebugEvent('CACHE_ERROR', `Failed to cache data: ${error}`);
     }
   }
-
   // Debug event tracker
   function addDebugEvent(type: string, message: string) {
+    const event = {
+      timestamp: new Date().toISOString(),
+      type,
+      message
+    } as DebugEvent;
+    
+    // Add to local array (keep last 50 events)
     debugEvents = [
-      ...debugEvents.slice(-49), // Keep last 50 events
-      {
-        timestamp: new Date().toISOString(),
-        type,
-        message
-      } as DebugEvent
+      ...debugEvents.slice(-49),
+      event
     ];
+    
+    // Stream to log file
+    streamEventToLog(event);
+  }
+  
+  // Stream debug events to log file
+  async function streamEventToLog(event: DebugEvent) {
+    try {
+      const logEntry = `[${event.timestamp}] ${event.type}: ${event.message}\n`;
+      
+      // Send to our debug stream API endpoint
+      await fetch('/api/system/debug-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entry: logEntry,
+          timestamp: event.timestamp,
+          type: event.type,
+          message: event.message
+        })
+      }).catch(error => {
+        // Silently fail if API is not available
+        console.warn('Failed to stream debug event to log:', error);
+      });
+    } catch (error) {
+      // Silently fail to avoid breaking the app
+      console.warn('Debug event streaming error:', error);
+    }
   }
 
   // Simple refresh detection
   function setupSimpleRefreshDetection(): number {
-    return window.setInterval(() => {
-      addDebugEvent('HEARTBEAT', 'Multi-wallet component still active');
-    }, 30000);
+    return window.setInterval(async () => {
+      // Check auth status periodically
+      const sessionResult = await authService.getCurrentSession();
+      const wasAuthenticated = isAuthenticated;
+      isAuthenticated = sessionResult.success && !!sessionResult.data;        if (wasAuthenticated !== isAuthenticated) {
+        addDebugEvent('AUTH_CHANGE', `Authentication status changed: ${isAuthenticated ? 'logged in' : 'logged out'}`);
+        
+        // Update database data status
+        await updateDatabaseDataStatus();
+        
+        if (isAuthenticated) {
+          // User just logged in - load from database
+          await loadFromDatabase();
+        } else {
+          // User logged out - fall back to localStorage
+          await loadFromLocalStorage();
+        }
+      }
+    }, 5000); // Check every 5 seconds
   }
 
-  // Ensure coin list is loaded
-  async function ensureCoinList() {
-    if (coinList.length > 0) return;
-
-    coinListError = null;
+  // Data migration functions
+  async function migrateToDatabase() {
+    if (!isAuthenticated) {
+      addDebugEvent('MIGRATION_ERROR', 'User must be logged in to migrate data');
+      return false;
+    }
 
     try {
-      performanceMetrics.apiCalls++;
-      const res = await fetch('/api/coinlist');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      addDebugEvent('MIGRATION_START', 'Starting migration from localStorage to database');
       
-      coinList = await res.json();
-      addDebugEvent('COINLIST_LOADED', `Loaded ${coinList.length} coins`);
-    } catch {
-      coinListError = 'Failed to load coin list';
-      addDebugEvent('COINLIST_ERROR', coinListError);
+      const result = await walletPersistenceService.migrateFromLocalStorage();
+      if (result.success) {
+        addDebugEvent('MIGRATION_SUCCESS', 'Successfully migrated data to database');
+        
+        // Reload from database to verify
+        await loadFromDatabase();
+        return true;
+      } else {
+        addDebugEvent('MIGRATION_ERROR', `Migration failed: ${result.error}`);
+        return false;
+      }
+    } catch (error: any) {
+      addDebugEvent('MIGRATION_ERROR', `Migration error: ${error.message}`);
+      return false;
     }
   }
 
-  // Advanced settings toggle
-  function handleShowAdvanced() {
-    showAdvancedCard = true;
-  }
+  async function clearDatabaseData() {
+    if (!isAuthenticated) {
+      addDebugEvent('CLEAR_ERROR', 'User must be logged in to clear database data');
+      return false;
+    }
 
+    try {
+      const result = await walletPersistenceService.clearAllWalletData();
+      if (result.success) {
+        addDebugEvent('CLEAR_SUCCESS', 'Successfully cleared all wallet data from database');
+        
+        // Clear local stores
+        walletsStore.set([]);
+        globalAddressOverrides.set({});
+        globalSymbolOverrides.set({});
+        return true;
+      } else {
+        addDebugEvent('CLEAR_ERROR', `Clear failed: ${result.error}`);
+        return false;
+      }
+    } catch (error: any) {
+      addDebugEvent('CLEAR_ERROR', `Clear error: ${error.message}`);
+      return false;
+    }
+  }
   // Event handlers
   async function handleAddWallet() {
     await addWallet();
+  }
+  // Handle address save events from wallet sections - Using MCP Service
+  async function handleAddressSave(event: CustomEvent<{ walletId: string; address: string; label?: string }>) {
+    const { walletId, address, label } = event.detail;
+    
+    if (!address?.trim()) {
+      addDebugEvent('ADDRESS_SAVE_ERROR', 'Cannot save empty address');
+      return;
+    }
+
+    // Check authentication status
+    if (!isAuthenticated) {
+      addDebugEvent('ADDRESS_SAVE_ERROR', 'User not authenticated - cannot save to database');
+      return;
+    }
+
+    try {
+      addDebugEvent('ADDRESS_SAVE_START', `Saving address via MCP for wallet ${walletId}: ${address}`);
+        // Use MCP service for direct database access
+      const result = await supabaseMCPWalletService.saveWalletAddress({
+        id: walletId,
+        address: address.trim(),
+        label: label?.trim() || `Wallet ${address.slice(0, 8)}...`
+      });
+
+      if (result.success) {
+        addDebugEvent('ADDRESS_SAVE_SUCCESS', `Successfully saved address via MCP for wallet ${walletId}: ${address}${label ? ` (${label})` : ''}`);
+          // Update the wallet in the store with the saved data
+        const wallets = get(walletsStore);
+        const walletIndex = wallets.findIndex(w => w.id === walletId);
+        if (walletIndex !== -1 && wallets[walletIndex]) {
+          wallets[walletIndex].address = address.trim();
+          if (label?.trim()) {
+            wallets[walletIndex].label = label.trim();
+          }
+          walletsStore.set(wallets);
+        }
+      } else {
+        throw new Error(result.error || 'MCP service failed to save address');
+      }
+      
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save address via MCP';
+      addDebugEvent('ADDRESS_SAVE_ERROR', `Failed to save address for wallet ${walletId}: ${errorMessage}`);
+      console.error('Address save error via MCP:', error);
+    }
+  }
+
+  // Debug panel event handlers
+  async function handleRefreshCoinList() {
+    await ensureCoinList(true); // Force refresh
+  }
+
+  async function handleRefreshBalances() {
+    const wallets = get(walletsStore);
+    for (const wallet of wallets) {
+      if (wallet.address.trim()) {
+        await loadWalletBalances(wallet.id);
+      }
+    }
+  }
+
+  function handleClearDebugEvents() {
+    debugEvents = [];
+    addDebugEvent('EVENTS_CLEARED', 'Debug events cleared');
+  }
+
+  function handleExportDebugData() {
+    const exportData = {
+      debugEvents,
+      performanceMetrics,
+      wallets: get(walletsStore).map(w => ({
+        id: w.id,
+        label: w.label,
+        address: w.address,
+        balancesLoaded: w.balancesLoaded,
+        portfolioCount: w.portfolio.length,
+        lastUpdated: w.lastUpdated
+      })),
+      globalOverrides: {
+        address: get(globalAddressOverrides),
+        symbol: get(globalSymbolOverrides)
+      },
+      authStatus: {
+        isAuthenticated,
+        hasLocalData: hasLocalStorageData()
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wallet-debug-data-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    addDebugEvent('DEBUG_EXPORTED', 'Debug data exported to file');
+  }
+
+  // Migration event handlers
+  async function handleMigrateToDatabase() {
+    const success = await migrateToDatabase();
+    if (success) {
+      addDebugEvent('MIGRATION_UI', 'Migration triggered from debug panel');
+    }
+  }
+
+  async function handleClearDatabaseData() {
+    const success = await clearDatabaseData();
+    if (success) {
+      addDebugEvent('CLEAR_UI', 'Database clear triggered from debug panel');
+    }
+  }
+
+  async function handleLoadFromDatabase() {
+    await loadFromDatabase();
+    addDebugEvent('RELOAD_UI', 'Database reload triggered from debug panel');
   }
 </script>
 
@@ -473,18 +938,18 @@
     {tokensCount}
     {chainsCount}
     {loadingPrices}
-    {pricesLoaded}
-    on:addWallet={handleAddWallet}
+    {pricesLoaded}    on:addWallet={handleAddWallet}
     on:loadAllPrices={loadAllPrices}
-    on:showAdvanced={handleShowAdvanced}
   />
   <!-- Individual Wallet Sections -->
   <div class="space-y-4">    {#each wallets as wallet (wallet.id)}      <WalletSection
         {wallet}
         globalPriceResponse={$globalPriceStore}
+        {coinList}
         on:updateWallet={(e) => updateWallet(e.detail)}
         on:removeWallet={(e) => removeWallet(e.detail)}
         on:loadBalances={(e) => loadWalletBalances(e.detail)}
+        on:addressSave={handleAddressSave}
       />
     {/each}
     
@@ -498,39 +963,22 @@
         >
           Add Your First Wallet
         </button>
-      </div>
-    {/if}
-  </div>
-
-  <!-- Advanced Settings Panel -->
-  {#if showAdvancedCard}
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-      <div class="p-6 border-b border-gray-100">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">Advanced Settings</h3>
-          <button 
-            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            on:click={() => showAdvancedCard = false}
-            title="Close Advanced Settings"
-          >
-            <span class="text-xl">×</span>
-          </button>
-        </div>
-      </div>
-      
-      <div class="p-6">        <OverrideManager 
-          {coinList}
-          addressOverrides={$globalAddressOverrides}
-          symbolOverrides={$globalSymbolOverrides}
-          on:updateGlobalAddressOverrides={(e) => globalAddressOverrides.set(e.detail)}
-          on:updateGlobalSymbolOverrides={(e) => globalSymbolOverrides.set(e.detail)}
-        />
-      </div>
-    </div>
-  {/if}
-  <!-- Debug Panel (Development Only) -->
-  {#if import.meta.env.DEV && debugInfo}
-    <DebugPanel {debugInfo} />
+      </div>    {/if}
+  </div>  // Debug Panel (Development Only)
+  {#if import.meta.env.DEV}
+    <DebugPanel 
+      debugInfo={debugPanelInfo}
+      coinListLoading={coinListLoading}
+      coinListError={coinListError}
+      balancesLoading={loadingPrices}
+      on:refreshCoinList={handleRefreshCoinList}
+      on:refreshBalances={handleRefreshBalances}
+      on:clearDebugEvents={handleClearDebugEvents}
+      on:exportDebugData={handleExportDebugData}
+      on:migrateToDatabase={handleMigrateToDatabase}
+      on:clearDatabaseData={handleClearDatabaseData}
+      on:loadFromDatabase={handleLoadFromDatabase}
+    />
   {/if}
 
 </div><style>

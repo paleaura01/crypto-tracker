@@ -7,23 +7,16 @@
   export let tokensCount: number;
   export let loadingPrices: boolean;
   export let pricesLoaded: boolean = false;
-
   const dispatch = createEventDispatcher<{
     addWallet: void;
     loadAllPrices: void;
-    showAdvanced: void;
   }>();
 
   function addWallet() {
     dispatch('addWallet');
   }
-
   function loadAllPrices() {
     dispatch('loadAllPrices');
-  }
-
-  function showAdvanced() {
-    dispatch('showAdvanced');
   }
 
   function formatCurrency(value: number): string {
@@ -150,18 +143,8 @@
       {:else}
         <span class="text-xl">💰</span>
       {/if}
-      <span>Load All Prices</span>
-    </button>
+      <span>Load All Prices</span>    </button>
   {/if}
-
-  <!-- Advanced Settings Button -->
-  <button 
-    class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-200"
-    on:click={showAdvanced}
-  >
-    <span class="text-xl">⚙️</span>
-    <span>Advanced</span>
-  </button>
 </div>
 
 <style>

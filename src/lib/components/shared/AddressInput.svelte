@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
+  import { supabaseMCPWalletService } from '$lib/services/supabase-mcp-wallet-service';
+  import { authService } from '$lib/services/auth-service';
   
   export let address: string = '';
   export let loading: boolean = false;
@@ -73,8 +75,7 @@
       addressLabel = '';
     }
   }
-  
-  // Save address to Supabase
+    // Save address to Supabase using MCP service
   async function saveAddress() {
     if (!address.trim() || !isValid) {
       saveError = 'Please enter a valid address first';
@@ -86,22 +87,19 @@
     saveSuccess = false;
     
     try {
-      const response = await fetch('/api/wallet/addresses/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: address.trim(),
-          label: addressLabel.trim() || null,
-          blockchain: 'ethereum'
-        })
+      // Check authentication status first
+      const sessionResult = await authService.getCurrentSession();
+      if (!sessionResult.success || !sessionResult.data) {
+        throw new Error('Authentication required to save addresses');
+      }      // Use MCP service for direct database access
+      const result = await supabaseMCPWalletService.saveWalletAddress({
+        id: `wallet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        address: address.trim(),
+        label: addressLabel.trim() || `Wallet ${address.slice(0, 8)}...`
       });
       
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to save address');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save address via MCP');
       }
       
       saveSuccess = true;
@@ -116,24 +114,37 @@
       await loadSavedAddresses();
       
     } catch (err: unknown) {
-      saveError = err instanceof Error ? err.message : 'Failed to save address';
+      saveError = err instanceof Error ? err.message : 'Failed to save address via MCP';
     } finally {
       saving = false;
     }
   }
-  
-  // Load saved addresses
+    // Load saved addresses using MCP service
   async function loadSavedAddresses() {
     try {
-      const response = await fetch('/api/wallet/addresses');
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          savedAddresses = result.data;
-        }
+      // Check authentication status first
+      const sessionResult = await authService.getCurrentSession();
+      if (!sessionResult.success || !sessionResult.data) {
+        // User not authenticated, no saved addresses to load
+        savedAddresses = [];
+        return;
+      }
+
+      // Use MCP service for direct database access
+      const result = await supabaseMCPWalletService.getWalletAddresses();      if (result.success && result.data) {
+        // Map WalletData to the expected interface
+        savedAddresses = result.data.map(wallet => ({
+          id: wallet.id,
+          address: wallet.address,
+          label: wallet.label,
+          blockchain: 'ethereum' // Default blockchain for all wallets
+        }));
+      } else {
+        savedAddresses = [];
       }
     } catch (err) {
-      console.error('Failed to load saved addresses:', err);
+      console.error('Failed to load saved addresses via MCP:', err);
+      savedAddresses = [];
     }
   }
   
@@ -143,23 +154,31 @@
     isValid = validateAddress(address);
     dispatch('change', { address });
   }
-  
-  // Remove saved address
+    // Remove saved address using MCP service
   async function removeSavedAddress(addressId: string) {
     try {
-      const response = await fetch('/api/wallet/addresses', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ addressId })
-      });
+      // Check authentication status first
+      const sessionResult = await authService.getCurrentSession();
+      if (!sessionResult.success || !sessionResult.data) {
+        console.error('Authentication required to remove addresses');
+        return;
+      }
+
+      // Find the address to get its actual address value for MCP deletion
+      const addressToRemove = savedAddresses.find(addr => addr.id === addressId);
+      if (!addressToRemove) {
+        console.error('Address not found for removal:', addressId);
+        return;
+      }      // Use MCP service for direct database access
+      const result = await supabaseMCPWalletService.deleteWalletAddress(addressToRemove.id || addressToRemove.address, addressToRemove.address);
       
-      if (response.ok) {
-        await loadSavedAddresses();
+      if (result.success) {
+        await loadSavedAddresses(); // Refresh the list
+      } else {
+        console.error('Failed to remove address via MCP:', result.error);
       }
     } catch (err) {
-      console.error('Failed to remove address:', err);
+      console.error('Failed to remove address via MCP:', err);
     }
   }
   

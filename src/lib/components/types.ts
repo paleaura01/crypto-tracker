@@ -92,6 +92,12 @@ export interface DebugInfo {
   streamEvents: DebugEvent[];
   cacheStatus: CacheStatus | null;
   performanceMetrics: PerformanceMetrics | null;
+  authStatus?: {
+    isAuthenticated: boolean;
+    userEmail: string | null;
+    hasLocalData: boolean;
+    hasDatabaseData: boolean;
+  };
 }
 
 export interface DebugPanelProps {

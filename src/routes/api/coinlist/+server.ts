@@ -9,26 +9,35 @@ interface CoinListEntry {
   platforms?: Record<string, string>;
 }
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url }) => {
   try {
-    // First, try to get from database
-    const { data: coinListData, error: fetchError } = await supabaseServer
-      .from('coinlist')
-      .select('*')
-      .order('last_updated', { ascending: false })
-      .limit(1)
-      .single();
+    const forceRefresh = url.searchParams.get('force') === 'true';
+    
+    // First, try to get from database (unless forcing refresh)
+    if (!forceRefresh) {
+      const { data: coinListData, error: fetchError } = await supabaseServer
+        .from('coinlist')
+        .select('*')
+        .order('last_updated', { ascending: false })
+        .limit(1)
+        .single();
 
-    // If we have data and it's less than 24 hours old, return it
-    if (coinListData && !fetchError) {
-      const lastUpdated = new Date(coinListData.last_updated);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
-      
-      if (hoursDiff < 24) {
-        return json(coinListData.data);
+      // If we have data and it's less than 24 hours old, return it
+      if (coinListData && !fetchError) {
+        const lastUpdated = new Date(coinListData.last_updated);
+        const now = new Date();
+        const hoursDiff = (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 24) {
+          return json({
+            success: true,
+            data: coinListData.data
+          });
+        }
       }
-    }    // Data is stale or doesn't exist, fetch from CoinGecko
+    }
+
+    // Data is stale or doesn't exist, fetch from CoinGecko
     const response = await fetch('https://api.coingecko.com/api/v3/coins/list?include_platform=true');
     
     if (!response.ok) {
@@ -48,7 +57,10 @@ export const GET: RequestHandler = async () => {
         onConflict: 'id'
       });    if (saveError) {
       // Still return the fresh data even if save failed
-    }    return json(freshData);
+    }    return json({
+      success: true,
+      data: freshData
+    });
   } catch {
     // Fallback: try to return any cached data we have, even if stale
     const { data: fallbackData } = await supabaseServer
@@ -59,9 +71,15 @@ export const GET: RequestHandler = async () => {
       .single();
 
     if (fallbackData) {
-      return json(fallbackData.data);
+      return json({
+        success: true,
+        data: fallbackData.data
+      });
     }
 
-    return json({ error: 'Failed to fetch coinlist' }, { status: 500 });
+    return json({
+      success: false,
+      error: 'Failed to fetch coinlist'
+    }, { status: 500 });
   }
 };

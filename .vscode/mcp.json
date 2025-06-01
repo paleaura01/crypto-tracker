@@ -37,25 +37,25 @@
         "--access-token",
         "sbp_c2b0d43c77c535a225df7a10322805612843bc74"
       ]
-    },
-    "fetch": {
+    },    "fetch": {
       "command": "node",
-      "args": ["d:\\Github\\crypto-tracker\\mcp-servers\\fetch-mcp\\dist\\index.js"]
+      "args": ["d:\\Github\\crypto-tracker\\mcp\\servers\\fetch-mcp\\dist\\index.js"]
     },
     "solver": {
       "command": "uv",
       "args": [
         "--directory",
-        "d:\\Github\\crypto-tracker\\mcp-servers\\mcp-solver",
+        "d:\\Github\\crypto-tracker\\mcp\\servers\\mcp-solver",
         "run",
         "mcp-solver-z3"
       ]
     },    "debug-shell": {
       "command": "node",
       "args": [
-        "d:\\Github\\crypto-tracker\\mcp-servers\\debug-shell-mcp.js"
+        "d:\\Github\\crypto-tracker\\mcp\\servers\\debug-shell-mcp.js"
       ]
-    },    "filesystem": {
+    },
+    "filesystem": {
       "command": "node",
       "args": [
         "d:\\Github\\crypto-tracker\\node_modules\\@modelcontextprotocol\\server-filesystem\\dist\\index.js",

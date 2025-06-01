@@ -44,7 +44,7 @@ Current active servers (all enabled):
 3. Always prefer action over explanation
 4. Use tools decisively rather than explaining what you're going to use them for
 5. **Sequential thinking is for PLANNING, not endless analysis**
-6. If you need to look at sql or anything related to supabase use the MCP server for supabase and make sure you use the .env variables to access the database.
+6. If you need to look at anything related to supabase use the MCP server for supabase and make sure you use the .env variables to access the database.
 7. Remember to use tailwind in the project.
 
 ## Test

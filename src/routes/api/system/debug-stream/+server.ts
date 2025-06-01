@@ -5,19 +5,21 @@ import { join } from 'path';
 // Simple streaming debug endpoint - writes one line at a time to a file
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { event } = await request.json();
+    const { entry, timestamp, type, message } = await request.json();
     
-    // Ensure debug directory exists
-    const debugDir = join(process.cwd(), 'static', 'data');
-    if (!existsSync(debugDir)) {
-      mkdirSync(debugDir, { recursive: true });
+    // Ensure logs directory exists
+    const logsDir = join(process.cwd(), 'logs');
+    if (!existsSync(logsDir)) {
+      mkdirSync(logsDir, { recursive: true });
     }
     
-    // Simple one-line format for streaming
-    const logLine = `${event.timestamp} [${event.type}] ${event.message}\n`;
+    // Use the formatted entry if provided, otherwise format it
+    const logLine = entry || `[${timestamp}] ${type}: ${message}\n`;
     
-    // Append to a simple stream log file
-    const streamLogPath = join(debugDir, 'debug-stream.log');    try {
+    // Append to debug stream log file in logs directory
+    const streamLogPath = join(logsDir, 'debug-stream.log');
+    
+    try {
       // Simple append - much more efficient than JSON manipulation
       writeFileSync(streamLogPath, logLine, { flag: 'a' });
     } catch {
@@ -27,7 +29,9 @@ export const POST: RequestHandler = async ({ request }) => {
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
-    });  } catch {
+    });
+  } catch (error) {
+    console.error('Debug stream write error:', error);
     return new Response(JSON.stringify({ error: 'Failed to write debug stream' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

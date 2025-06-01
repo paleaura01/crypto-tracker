@@ -5,7 +5,10 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build",
+		"clean": "node scripts/clean.js",
+		"clean:win": "scripts\\clean.bat",
+		"prebuild": "npm run clean",
+		"build": "npm run clean && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"test": "vitest",
@@ -15,6 +18,8 @@
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"type-check": "svelte-check --tsconfig ./tsconfig.json",
+		"migrate": "node scripts/migrate.js",
+		"migrate:mcp": "node scripts/migrate-mcp.js",
 		"mcp:inspector": "npx @modelcontextprotocol/inspector --config .vscode/mcp.json",
 		"mcp:setup": "powershell -ExecutionPolicy Bypass -File mcp/scripts/setup-mcp-vercel.ps1",
 		"mcp:filesystem": "node node_modules/@modelcontextprotocol/server-filesystem/dist/index.js"
