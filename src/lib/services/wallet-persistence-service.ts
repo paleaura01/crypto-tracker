@@ -76,14 +76,14 @@ export class WalletPersistenceService {
           addressOverrides: w.addressOverrides,
           symbolOverrides: w.symbolOverrides
         }))
-      };
-
-      const { data, error } = await supabase
+      };      const { data, error } = await supabase
         .from('wallet_settings')
         .upsert({
           user_id: user.id,
           settings_type: 'multi_wallet',
           settings_data: walletSaveData
+        }, {
+          onConflict: 'user_id, settings_type'
         })
         .select()
         .single();
@@ -94,7 +94,18 @@ export class WalletPersistenceService {
       
       return createApiResponse(data);
     } catch (error: unknown) {
+      // Enhanced error logging for better debugging
       const errorMessage = error instanceof Error ? error.message : 'Failed to save wallet configuration';
+      const errorDetails = error instanceof Error && 'details' in error ? error.details : null;
+      const errorCode = error instanceof Error && 'code' in error ? error.code : null;
+      
+      console.error('WalletPersistenceService.saveWalletConfiguration error:', {
+        message: errorMessage,
+        code: errorCode,
+        details: errorDetails,
+        error: error
+      });
+      
       return createErrorResponse(errorMessage);
     }
   }

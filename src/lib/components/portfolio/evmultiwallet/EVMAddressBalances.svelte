@@ -25,10 +25,10 @@
   // STORAGE KEYS (for cache data only - user data will be in Supabase)
   const BALANCE_CACHE_PREFIX = 'wallet-balances-';
   const PRICE_CACHE_PREFIX = 'price-data-';
-
   // Multi-wallet state management using Svelte stores
   const walletsStore = writable<WalletData[]>([]);
   const globalPriceStore = writable<GlobalPriceResp>(null);
+  const debugEventsStore = writable<DebugEvent[]>([]);
   const globalAddressOverrides = writable<OverrideMap>({});
   const globalSymbolOverrides = writable<OverrideMap>({});  // Authentication state
   let isAuthenticated = false;
@@ -40,7 +40,7 @@
   let coinListLoading = false;
   let loadingPrices = false;
   let coinList: CoinListEntry[] = [];
-  let debugEvents: DebugEvent[] = [];
+  // Remove the old debugEvents array - now using debugEventsStore
   let refreshDetector: number | null = null;
   let performanceMetrics: PerformanceMetrics = {
     loadTime: 0,
@@ -78,7 +78,7 @@
   $: pricesLoaded = $globalPriceStore && typeof $globalPriceStore === 'object' && !('error' in $globalPriceStore) ? true : false;  // Debug info aggregator for DebugPanel
   $: debugPanelInfo = {
     refreshDetector,
-    streamEvents: [...debugEvents], // Create new array to ensure reactivity
+    streamEvents: $debugEventsStore, // Use the reactive store directly
     cacheStatus: {
       healthy: !coinListError && coinList.length > 0,
       lastUpdate: coinList.length ? new Date().toISOString() : undefined,
@@ -97,8 +97,8 @@
   $: {
     console.log('Debug Panel Info - streamEvents:', debugPanelInfo.streamEvents);
     console.log('Debug Panel Info - streamEvents length:', debugPanelInfo.streamEvents?.length);
-    console.log('Debug Panel Info - debugEvents array:', debugEvents);
-    console.log('Debug Panel Info - debugEvents length:', debugEvents.length);
+    console.log('Debug Panel Info - debugEvents store:', $debugEventsStore);
+    console.log('Debug Panel Info - debugEvents store length:', $debugEventsStore.length);
   }
 
   // Check if user has data in the database
@@ -681,8 +681,7 @@
     } catch (error) {
       addDebugEvent('CACHE_ERROR', `Failed to cache data: ${error}`);
     }
-  }
-  // Debug event tracker
+  }  // Debug event tracker
   function addDebugEvent(type: string, message: string) {
     const event = {
       timestamp: new Date().toISOString(),
@@ -690,11 +689,11 @@
       message
     } as DebugEvent;
     
-    // Add to local array (keep last 50 events)
-    debugEvents = [
-      ...debugEvents.slice(-49),
+    // Add to store (keep last 50 events) - this will trigger reactivity
+    debugEventsStore.update(events => [
+      ...events.slice(-49),
       event
-    ];
+    ]);
     
     // Stream to log file
     streamEventToLog(event);
@@ -866,15 +865,13 @@
       }
     }
   }
-
   function handleClearDebugEvents() {
-    debugEvents = [];
+    debugEventsStore.set([]);
     addDebugEvent('EVENTS_CLEARED', 'Debug events cleared');
   }
-
   function handleExportDebugData() {
     const exportData = {
-      debugEvents,
+      debugEvents: get(debugEventsStore),
       performanceMetrics,
       wallets: get(walletsStore).map(w => ({
         id: w.id,
