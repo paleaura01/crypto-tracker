@@ -25,8 +25,8 @@
   let editAddressCgId = '';
   let searchQuery = '';
   let saving = false; // Loading state for API calls
-    // API helper functions
-  async function saveOverrideToAPI(type: 'symbol' | 'address', contractAddress: string, value: string | null, action: 'upsert' | 'delete' = 'upsert'): Promise<boolean> {
+  // API helper functions
+  async function saveOverrideToAPI(type: 'symbol' | 'address', contractAddress: string, value: string | null, action: 'upsert' | 'delete' = 'upsert', symbol?: string): Promise<boolean> {
     if (!walletAddress || !walletId) {
       console.error('Wallet context missing for override save');
       return false;
@@ -41,7 +41,7 @@
         throw new Error('Not authenticated');
       }
       
-      const payload = {
+      const payload: any = {
         contractAddress: contractAddress.toLowerCase(),
         chain: 'eth',
         overrideType: type === 'symbol' ? 'symbol' : 'coingecko_id',
@@ -49,6 +49,11 @@
         walletAddress,
         action
       };
+      
+      // For symbol overrides, include the symbol name
+      if (type === 'symbol' && symbol) {
+        payload.symbol = symbol.toUpperCase();
+      }
       
       const response = await fetch('/api/overrides', {
         method: 'POST',
@@ -71,11 +76,12 @@
     } finally {
       saving = false;
     }
-  }
-    async function loadWalletOverrides(): Promise<void> {
+  }  async function loadWalletOverrides(): Promise<void> {
     if (!walletAddress) return;
     
     try {
+      console.log(`Loading overrides for wallet: ${walletAddress}`);
+      
       // Get the current session for authentication
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
@@ -90,9 +96,19 @@
       const result = await response.json();
       
       if (response.ok) {
-        // Update local override data using the correct API response format
-        const newSymbolOverrides: Record<string, string | null> = result.symbolOverrides || {};
+        // Process symbol overrides - map from contract address to symbol correctly
+        const newSymbolOverrides: Record<string, string | null> = {};
+        const symbolOverridesData = result.symbolOverrides || {};
+        
+        // Map overrides by symbol key (already provided by API)
+        for (const [symbolKey, overrideValue] of Object.entries(symbolOverridesData)) {
+          newSymbolOverrides[symbolKey.toUpperCase()] = overrideValue as string | null;
+        }
+        
         const newAddressOverrides: Record<string, string | null> = result.addressOverrides || {};
+        
+        console.log(`Loaded symbol overrides:`, newSymbolOverrides);
+        console.log(`Loaded address overrides:`, newAddressOverrides);
         
         // Update props (parent component should handle this)
         symbolOverrides = newSymbolOverrides;
@@ -115,17 +131,31 @@
   // Reload overrides whenever walletAddress changes
   $: if (walletAddress) loadWalletOverrides();
 
-  // Get unique symbols from available tokens
-  $: uniqueSymbols = Array.from(new Set(availableTokens.map(t => t.symbol.toUpperCase())));
-  
-  // Get unique addresses with their details
+  // Get unique symbols from available tokens + any overridden symbols to keep excluded ones visible
+  $: uniqueSymbols = Array.from(
+    new Set([
+      ...availableTokens.map(t => t.symbol.toUpperCase()),
+      ...Object.keys(symbolOverrides).map(s => s.toUpperCase())
+    ])
+  );
+    // Get unique addresses from available tokens + any overridden addresses to keep excluded ones visible
   $: uniqueAddresses = Array.from(
-    new Map(
-      availableTokens.map(t => [
+    new Map<string, { address: string; symbol: string; chain: string }>([
+      // existing tokens
+      ...availableTokens.map(t => [
         `${t.contractAddress.toLowerCase()}-${t.chain}`,
         { address: t.contractAddress.toLowerCase(), symbol: t.symbol, chain: t.chain }
-      ])
-    ).values()
+      ] as [string, { address: string; symbol: string; chain: string }]),
+      // overridden addresses
+      ...Object.keys(addressOverrides).map(addr => {
+        const lower = addr.toLowerCase();
+        const t = availableTokens.find(tok => tok.contractAddress.toLowerCase() === lower);
+        return [
+          `${lower}-${t?.chain || 'eth'}`,
+          { address: lower, symbol: t?.symbol || '', chain: t?.chain || 'eth' }
+        ] as [string, { address: string; symbol: string; chain: string }];
+      })
+    ]).values()
   );
   
   // Filter coin list based on search
@@ -149,7 +179,7 @@
     editAddressCgId = addressOverrides[address] || '';
     searchQuery = '';
   }
-    // Save symbol override
+  // Save symbol override
   async function saveSymbolOverride() {
     if (!editingSymbol) return;
     
@@ -157,23 +187,26 @@
     
     if (editSymbolCgId === '__NONE__') {
       symbol = null; // Explicitly exclude
+      console.log(`Setting symbol override for ${editingSymbol} to EXCLUDE (null)`);
     } else if (editSymbolCgId && editSymbolCgId.trim()) {
       symbol = editSymbolCgId.trim();
+      console.log(`Setting symbol override for ${editingSymbol} to: ${symbol}`);
     }
-    
-    // Find the contract address for this symbol
+      // Find the contract address for this symbol
     const token = availableTokens.find(t => t.symbol.toUpperCase() === editingSymbol);
     if (token) {
-      const success = await saveOverrideToAPI('symbol', token.contractAddress, symbol, 'upsert');
-      
-      if (success) {
-        // Update local state
+      console.log(`Found token for symbol ${editingSymbol}: contract=${token.contractAddress}, chain=${token.chain}`);
+      const success = await saveOverrideToAPI('symbol', token.contractAddress, symbol, 'upsert', editingSymbol);
+        if (success) {
+        // Update local state - store by symbol, not contract address
         if (symbol === null) {
-          symbolOverrides[token.contractAddress] = null;
+          symbolOverrides[editingSymbol] = null;
         } else {
-          symbolOverrides[token.contractAddress] = symbol;
+          symbolOverrides[editingSymbol] = symbol;
         }
         symbolOverrides = { ...symbolOverrides }; // Trigger reactivity
+        
+        console.log(`Updated symbolOverrides:`, symbolOverrides);
         
         // Dispatch legacy event for backward compatibility
         dispatch('symbolOverride', { 
@@ -184,17 +217,22 @@
         editingSymbol = null;
         editSymbolCgId = '';
       }
+    } else {
+      console.error(`No token found for symbol: ${editingSymbol}`);
     }
   }
-  
-  // Save address override
+    // Save address override
   async function saveAddressOverride() {
     if (!editingAddress) return;
     
     let coinGeckoId: string | null = null;
     
-    if (editAddressCgId && editAddressCgId.trim()) {
+    if (editAddressCgId === '__NONE__') {
+      coinGeckoId = null; // Explicitly exclude
+      console.log(`Setting address override for ${editingAddress} to EXCLUDE (null)`);
+    } else if (editAddressCgId && editAddressCgId.trim()) {
       coinGeckoId = editAddressCgId.trim();
+      console.log(`Setting address override for ${editingAddress} to: ${coinGeckoId}`);
     }
     
     const success = await saveOverrideToAPI('address', editingAddress, coinGeckoId, 'upsert');
@@ -208,6 +246,8 @@
       }
       addressOverrides = { ...addressOverrides }; // Trigger reactivity
       
+      console.log(`Updated addressOverrides:`, addressOverrides);
+      
       // Dispatch legacy event for backward compatibility
       dispatch('addressOverride', { 
         contractAddress: editingAddress,
@@ -218,25 +258,31 @@
       editAddressCgId = '';
     }
   }
-    // Remove override
+  // Remove override
   async function removeOverride(type: 'symbol' | 'address', key: string) {
     let contractAddress = '';
     
     if (type === 'symbol') {
       // Find the contract address for this symbol
       const token = availableTokens.find(t => t.symbol.toUpperCase() === key);
-      if (!token) return;
+      if (!token) {
+        console.error(`No token found for symbol: ${key}`);
+        return;
+      }
       contractAddress = token.contractAddress;
+      console.log(`Removing symbol override for ${key} (contract: ${contractAddress})`);
     } else {
       contractAddress = key;
+      console.log(`Removing address override for ${contractAddress}`);
     }
     
-    const success = await saveOverrideToAPI(type, contractAddress, null, 'delete');
+    const success = await saveOverrideToAPI(type, contractAddress, null, 'delete', type === 'symbol' ? key : undefined);
     
     if (success) {
       // Update local state
       if (type === 'symbol') {
-        delete symbolOverrides[contractAddress];
+        // Fix: Delete by symbol key, not contract address
+        delete symbolOverrides[key];
         symbolOverrides = { ...symbolOverrides }; // Trigger reactivity
         
         // Dispatch legacy event for backward compatibility
@@ -275,6 +321,18 @@
     }
     searchQuery = '';
   }
+    // Sort symbols and addresses, excluding null overrides to the bottom
+  $: sortedSymbols = uniqueSymbols.slice().sort((a, b) => {
+    const aExcluded = symbolOverrides[a] === null;
+    const bExcluded = symbolOverrides[b] === null;
+    if (aExcluded === bExcluded) return 0;
+    return aExcluded ? 1 : -1;
+  });  $: sortedAddresses = uniqueAddresses.slice().sort((a, b) => {
+    const aExcluded = addressOverrides[a.address] === null;
+    const bExcluded = addressOverrides[b.address] === null;
+    if (aExcluded === bExcluded) return 0;
+    return aExcluded ? 1 : -1;
+  });
 </script>
 
 <div class="override-manager mt-8">
@@ -315,7 +373,7 @@
           Override CoinGecko IDs for specific token symbols to ensure accurate price matching.
         </p>
       </div>        <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
-        {#each uniqueSymbols as symbol (symbol)}
+        {#each sortedSymbols as symbol (symbol)}
           {@const hasOverride = symbolOverrides[symbol] !== undefined}
           {@const overrideValue = symbolOverrides[symbol]}
           
@@ -464,9 +522,11 @@
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Override CoinGecko IDs for specific contract addresses when auto-detection fails.
         </p>
-      </div>      
-      <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
-        {#each uniqueAddresses as { address, symbol, chain } (`${address}-${chain}`)}
+      </div>        <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+        {#each sortedAddresses as addressInfo (`${addressInfo.address}-${addressInfo.chain}`)}
+          {@const address = addressInfo.address}
+          {@const symbol = addressInfo.symbol}
+          {@const chain = addressInfo.chain}
           {@const hasOverride = addressOverrides[address] !== undefined}
           {@const overrideValue = addressOverrides[address]}
           
@@ -487,12 +547,17 @@
                     <span class="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full text-xs font-medium">
                       {chain}
                     </span>
-                  </div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400">
+                  </div>                  <div class="text-sm text-gray-500 dark:text-gray-400">
                     {#if hasOverride}
-                      <span class="inline-flex items-center px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
-                        ✅ → {overrideValue}
-                      </span>
+                      {#if overrideValue === null}
+                        <span class="inline-flex items-center px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-xs font-medium">
+                          🚫 Excluded from pricing
+                        </span>
+                      {:else}
+                        <span class="inline-flex items-center px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
+                          ✅ → {overrideValue}
+                        </span>
+                      {/if}
                     {:else}
                       <span class="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-full text-xs font-medium">
                         🤖 Auto-detect
@@ -568,11 +633,20 @@
                       <div class="p-3 text-center text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600">
                         ...and {filteredCoinList.length - 20} more. Refine your search to see more.
                       </div>
-                    {/if}
-                  </div>
+                    {/if}                  </div>
                 {/if}
                 
-                <div class="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">                  <button
+                <div class="flex items-center gap-3">
+                  <button
+                    type="button"
+                    on:click={() => { editAddressCgId = '__NONE__'; }}
+                    class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2"
+                  >
+                    🚫 Exclude from pricing
+                  </button>
+                </div>
+                
+                <div class="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-600"><button
                     type="button"
                     on:click={saveAddressOverride}
                     class="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
@@ -598,7 +672,6 @@
           </div>
         {/each}
       </div>
-    </div>
-  {/if}
+    </div>  {/if}
   </div>
 </div>

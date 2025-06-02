@@ -59,9 +59,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
     if (error) {
       return json({ error: 'Failed to fetch overrides' }, { status: 500 });
-    }
-
-    // Transform to the format expected by the frontend
+    }    // Transform to the format expected by the frontend
     // Group by wallet address for wallet-specific response
     if (walletAddress) {
       const walletOverrides: Record<string, string | null> = {};
@@ -70,10 +68,11 @@ export const GET: RequestHandler = async ({ request, url }) => {
       const symbolOverrides: Record<string, string | null> = {};
 
       overrides.forEach(override => {
-        const key = override.contract_address;
         const isGlobal = override.wallet_address === null;
         
-        if (override.override_type === 'address') {
+        if (override.override_type === 'coingecko_id') {
+          // Address overrides: key by contract address
+          const key = override.contract_address;
           addressOverrides[key] = override.override_value;
           if (isGlobal) {
             globalOverrides[key] = override.override_value;
@@ -81,6 +80,8 @@ export const GET: RequestHandler = async ({ request, url }) => {
             walletOverrides[key] = override.override_value;
           }
         } else if (override.override_type === 'symbol') {
+          // Symbol overrides: key by contract address
+          const key = override.contract_address;
           symbolOverrides[key] = override.override_value;
           if (isGlobal) {
             globalOverrides[key] = override.override_value;
@@ -97,7 +98,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
         global: globalOverrides,
         walletAddress
       });
-    } else {      // Return all overrides grouped by wallet
+    } else {// Return all overrides grouped by wallet
       const walletGroups: Record<string, { addressOverrides: Record<string, string | null>, symbolOverrides: Record<string, string | null> }> = {};
       const globalOverrides: { addressOverrides: Record<string, string | null>, symbolOverrides: Record<string, string | null> } = { 
         addressOverrides: {}, 
@@ -167,16 +168,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
     if (authError || !user) {
       return json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { 
+    }    const { 
       contractAddress, 
       chain = 'eth',
       overrideType, 
       overrideValue,
       walletAddress = null, // New: wallet-specific override
       walletId = null,      // New: reference to wallets table
-      action = 'upsert'     // New: operation type (upsert, delete, bulk_delete)
+      action = 'upsert',    // New: operation type (upsert, delete, bulk_delete)
     } = await request.json();
 
     if (!contractAddress || !overrideType) {
@@ -261,7 +260,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
       return json({ success: true, action: 'delete' });
     }    // Handle upsert operation
-    const overrideData = {
+    const overrideData: { [key: string]: unknown } = {
       user_id: user.id,
       contract_address: contractAddress,
       chain,
@@ -275,7 +274,9 @@ export const POST: RequestHandler = async ({ request }) => {
         created_via: 'api',
         user_agent: request.headers.get('user-agent') || 'unknown'
       }
-    };    // First, soft delete any existing active override using the authenticated client
+    };
+
+    // First, soft delete any existing active override using the authenticated client
     await userSupabase
       .from('token_overrides')
       .update({ 
