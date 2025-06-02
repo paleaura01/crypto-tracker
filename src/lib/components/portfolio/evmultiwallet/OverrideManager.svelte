@@ -94,15 +94,20 @@
         }
       });
       const result = await response.json();
-      
-      if (response.ok) {
+        if (response.ok) {
         // Process symbol overrides - map from contract address to symbol correctly
         const newSymbolOverrides: Record<string, string | null> = {};
         const symbolOverridesData = result.symbolOverrides || {};
         
-        // Map overrides by symbol key (already provided by API)
-        for (const [symbolKey, overrideValue] of Object.entries(symbolOverridesData)) {
-          newSymbolOverrides[symbolKey.toUpperCase()] = overrideValue as string | null;
+        // Map overrides from contract address to symbol using availableTokens
+        for (const [contractAddress, overrideValue] of Object.entries(symbolOverridesData)) {
+          // Find the token with this contract address to get the symbol
+          const token = availableTokens.find(t => t.contractAddress.toLowerCase() === contractAddress.toLowerCase());
+          if (token) {
+            newSymbolOverrides[token.symbol.toUpperCase()] = overrideValue as string | null;
+          } else {
+            console.warn(`No token found for contract address: ${contractAddress} in symbol overrides`);
+          }
         }
         
         const newAddressOverrides: Record<string, string | null> = result.addressOverrides || {};
@@ -130,12 +135,10 @@
   
   // Reload overrides whenever walletAddress changes
   $: if (walletAddress) loadWalletOverrides();
-
-  // Get unique symbols from available tokens + any overridden symbols to keep excluded ones visible
+  // Get unique symbols from available tokens only (not from override keys which might be contract addresses)
   $: uniqueSymbols = Array.from(
     new Set([
-      ...availableTokens.map(t => t.symbol.toUpperCase()),
-      ...Object.keys(symbolOverrides).map(s => s.toUpperCase())
+      ...availableTokens.map(t => t.symbol.toUpperCase())
     ])
   );
     // Get unique addresses from available tokens + any overridden addresses to keep excluded ones visible
