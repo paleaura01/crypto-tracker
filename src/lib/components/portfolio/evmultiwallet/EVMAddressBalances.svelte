@@ -337,11 +337,16 @@
         }
       } catch (error: any) {
         addDebugEvent('DB_ERROR', `Failed to load addresses via MCP: ${error.message}`);
-      }
-
-      if (restoredWallets.length > 0) {
+      }      if (restoredWallets.length > 0) {
         walletsStore.set(restoredWallets);
         addDebugEvent('DB_LOAD', `Total restored wallets via MCP: ${restoredWallets.length}`);
+        
+        // Load wallet-specific overrides for each wallet
+        for (const wallet of restoredWallets) {
+          if (wallet.address.trim()) {
+            await loadWalletOverrides(wallet);
+          }
+        }
       } else {
         addDebugEvent('DB_LOAD', 'No wallets found in database via MCP');
       }
@@ -961,6 +966,61 @@
       console.error('Address save error via MCP:', error);
     }
   }
+  // Handle override changes from wallet settings
+  async function handleOverridesChanged(event: CustomEvent<{ walletId: string }>) {
+    const { walletId } = event.detail;
+    addDebugEvent('OVERRIDES_CHANGED', `Override changes detected for wallet ${walletId} - reloading data`);
+    
+    const wallets = get(walletsStore);
+    const wallet = wallets.find(w => w.id === walletId);
+    
+    if (wallet && wallet.address) {
+      await loadWalletOverrides(wallet);
+      await computeWalletPortfolio(wallet);
+    }
+  }
+  
+  // Load wallet-specific overrides from the API
+  async function loadWalletOverrides(wallet: WalletData): Promise<void> {
+    if (!wallet.address.trim()) return;
+    
+    try {
+      addDebugEvent('OVERRIDE_LOAD_START', `Loading overrides for wallet ${wallet.label || wallet.address}`);
+      
+      const response = await fetch(`/api/overrides?wallet_address=${encodeURIComponent(wallet.address)}`);
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        const newSymbolOverrides: Record<string, string | null> = {};
+        const newAddressOverrides: Record<string, string | null> = {};
+        
+        if (result.data.wallets && result.data.wallets[wallet.address]) {
+          const walletOverrides = result.data.wallets[wallet.address];
+          
+          walletOverrides.forEach((override: any) => {
+            if (override.type === 'symbol' && override.symbol_override !== undefined) {
+              newSymbolOverrides[override.contract_address] = override.symbol_override;
+            } else if (override.type === 'address' && override.coingecko_id_override !== undefined) {
+              newAddressOverrides[override.contract_address] = override.coingecko_id_override;
+            }
+          });
+        }
+        
+        // Update wallet's override data
+        const updatedWallet = {
+          ...wallet,
+          symbolOverrides: newSymbolOverrides,
+          addressOverrides: newAddressOverrides
+        };
+        
+        updateWallet(updatedWallet);
+        addDebugEvent('OVERRIDE_LOAD_SUCCESS', `Loaded ${Object.keys(newSymbolOverrides).length} symbol and ${Object.keys(newAddressOverrides).length} address overrides for wallet ${wallet.label || wallet.address}`);
+      } else {
+        addDebugEvent('OVERRIDE_LOAD_ERROR', `Failed to load overrides for wallet ${wallet.label || wallet.address}: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {      addDebugEvent('OVERRIDE_LOAD_ERROR', `Error loading overrides for wallet ${wallet.label || wallet.address}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 
   // Debug panel event handlers
   async function handleRefreshCoinList() {
@@ -1056,10 +1116,10 @@
         {coinList}
         existingAddresses={getExistingAddressesExcluding(wallet.id)}
         on:updateWallet={(e) => updateWallet(e.detail)}
-        on:removeWallet={(e) => removeWallet(e.detail)}
-        on:loadBalances={(e) => loadWalletBalances(e.detail)}
+        on:removeWallet={(e) => removeWallet(e.detail)}        on:loadBalances={(e) => loadWalletBalances(e.detail)}
         on:addressSubmit={(e) => loadWalletBalances(e.detail.walletId)}
         on:addressSave={handleAddressSave}
+        on:overridesChanged={handleOverridesChanged}
       />
     {/each}
     

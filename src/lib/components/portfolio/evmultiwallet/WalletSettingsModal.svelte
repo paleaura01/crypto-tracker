@@ -8,12 +8,12 @@
   export let wallet: WalletData;
   export let coinList: CoinListEntry[] = [];
   export let show = false;
-
   const dispatch = createEventDispatcher<{
     close: void;
     symbolOverride: { contractAddress: string; symbol: string | null };
     addressOverride: { contractAddress: string; coinGeckoId: string | null };
     updateWallet: WalletData;
+    overridesChanged: { walletId: string };
   }>();
 
   let activeTab: 'overrides' | 'debug' = 'overrides';
@@ -22,7 +22,7 @@
     dispatch('close');
   }
 
-  function handleOutsideClick(event: MouseEvent) {
+  function handleOutsideClick(event: Event) {
     if (event.target === event.currentTarget) {
       closeModal();
     }
@@ -57,13 +57,17 @@
 
 {#if show}
   <!-- Modal Backdrop -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div 
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
     transition:fade={{ duration: 200 }}
-    on:click={handleOutsideClick}
     role="dialog"
     aria-modal="true"
     aria-labelledby="modal-title"
+    tabindex="0"
+    on:click={handleOutsideClick}
+    on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleOutsideClick(e)}
   >
     <!-- Modal Content -->
     <div 
@@ -153,8 +157,7 @@
                   <p class="text-sm text-gray-600 mt-1">
                     Customize how tokens are displayed and priced for this wallet
                   </p>
-                </div>
-                <div class="p-4">
+                </div>                <div class="p-4">
                   <OverrideManager 
                     {coinList}
                     addressOverrides={wallet.addressOverrides || {}}
@@ -164,9 +167,15 @@
                       contractAddress: token.contractAddress || '',
                       chain: token.chain || ''
                     }))}
+                    walletAddress={wallet.address}
+                    walletId={wallet.id}
                     disabled={false}
                     on:symbolOverride={handleSymbolOverride}
                     on:addressOverride={handleAddressOverride}
+                    on:overridesChanged={() => {
+                      // Trigger parent to reload wallet data
+                      dispatch('overridesChanged', { walletId: wallet.id });
+                    }}
                   />
                 </div>
               </div>

@@ -10,13 +10,13 @@
   export let walletIndex: number = 0;
   export let coinList: CoinListEntry[] = [];
   export let existingAddresses: string[] = [];
-
   const dispatch = createEventDispatcher<{
     updateWallet: WalletData;
     removeWallet: string;
     loadBalances: string;
     addressSubmit: { walletId: string; address: string };
     addressSave: { walletId: string; address: string; label?: string };
+    overridesChanged: { walletId: string };
   }>();
 
   // Wallet accent colors for visual distinction
@@ -301,6 +301,7 @@
   on:symbolOverride={handleSymbolOverride}
   on:addressOverride={handleAddressOverride}
   on:updateWallet={(e) => dispatch('updateWallet', e.detail)}
+  on:overridesChanged={(e) => dispatch('overridesChanged', e.detail)}
 />
 
 <style>

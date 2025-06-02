@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { supabase } from '$lib/supabaseClient';
+  import { onMount } from 'svelte';
   
   export let symbolOverrides: Record<string, string | null> = {};
   export let addressOverrides: Record<string, string | null> = {};
@@ -7,18 +9,113 @@
   export let coinList: Array<{ id: string; symbol: string; name: string }> = [];
   export let disabled: boolean = false;
   
+  // Wallet context for API calls
+  export let walletAddress: string = '';
+  export let walletId: string = '';
+  
   const dispatch = createEventDispatcher<{
     symbolOverride: { contractAddress: string; symbol: string | null };
     addressOverride: { contractAddress: string; coinGeckoId: string | null };
+    overridesChanged: void; // New event to notify parent of changes
   }>();
-  
-  let activeTab: 'symbols' | 'addresses' = 'symbols';
+    let activeTab: 'symbols' | 'addresses' = 'symbols';
   let editingSymbol: string | null = null;
   let editingAddress: string | null = null;
   let editSymbolCgId = '';
   let editAddressCgId = '';
   let searchQuery = '';
+  let saving = false; // Loading state for API calls
+    // API helper functions
+  async function saveOverrideToAPI(type: 'symbol' | 'address', contractAddress: string, value: string | null): Promise<boolean> {
+    if (!walletAddress || !walletId) {
+      console.error('Wallet context missing for override save');
+      return false;
+    }
+    
+    try {
+      saving = true;
+      
+      // Get the current session for authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Not authenticated');
+      }
+      
+      const payload = {
+        contractAddress: contractAddress.toLowerCase(),
+        chain: 'eth',
+        overrideType: type === 'symbol' ? 'symbol' : 'coingecko_id',
+        overrideValue: value,
+        walletAddress,
+        walletId,
+        action: value === null ? 'delete' : 'upsert'
+      };
+      
+      const response = await fetch('/api/overrides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(payload)
+      });      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to save override:', error);
+      alert(`Failed to save override: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
+    } finally {
+      saving = false;
+    }
+  }
+    async function loadWalletOverrides(): Promise<void> {
+    if (!walletAddress) return;
+    
+    try {
+      // Get the current session for authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('Not authenticated for loading overrides');
+        return;
+      }
+        const response = await fetch(`/api/overrides?wallet_address=${encodeURIComponent(walletAddress)}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      const result = await response.json();
+      
+      if (response.ok) {
+        // Update local override data using the correct API response format
+        const newSymbolOverrides: Record<string, string | null> = result.symbolOverrides || {};
+        const newAddressOverrides: Record<string, string | null> = result.addressOverrides || {};
+        
+        // Update props (parent component should handle this)
+        symbolOverrides = newSymbolOverrides;
+        addressOverrides = newAddressOverrides;
+        
+        dispatch('overridesChanged');
+      } else {
+        throw new Error(result.error || 'Failed to load overrides');
+      }
+    } catch (error) {
+      console.error('Failed to load wallet overrides:', error);
+    }
+  }
   
+  // Load overrides when component mounts
+  onMount(() => {
+    if (walletAddress) loadWalletOverrides();
+  });
+  
+  // Reload overrides whenever walletAddress changes
+  $: if (walletAddress) loadWalletOverrides();
+
   // Get unique symbols from available tokens
   $: uniqueSymbols = Array.from(new Set(availableTokens.map(t => t.symbol.toUpperCase())));
   
@@ -53,9 +150,8 @@
     editAddressCgId = addressOverrides[address] || '';
     searchQuery = '';
   }
-  
-  // Save symbol override
-  function saveSymbolOverride() {
+    // Save symbol override
+  async function saveSymbolOverride() {
     if (!editingSymbol) return;
     
     let symbol: string | null = null;
@@ -69,18 +165,31 @@
     // Find the contract address for this symbol
     const token = availableTokens.find(t => t.symbol.toUpperCase() === editingSymbol);
     if (token) {
-      dispatch('symbolOverride', { 
-        contractAddress: token.contractAddress,
-        symbol 
-      });
+      const success = await saveOverrideToAPI('symbol', token.contractAddress, symbol);
+      
+      if (success) {
+        // Update local state
+        if (symbol === null) {
+          delete symbolOverrides[token.contractAddress];
+        } else {
+          symbolOverrides[token.contractAddress] = symbol;
+        }
+        symbolOverrides = { ...symbolOverrides }; // Trigger reactivity
+        
+        // Dispatch legacy event for backward compatibility
+        dispatch('symbolOverride', { 
+          contractAddress: token.contractAddress,
+          symbol 
+        });
+        
+        editingSymbol = null;
+        editSymbolCgId = '';
+      }
     }
-    
-    editingSymbol = null;
-    editSymbolCgId = '';
   }
   
   // Save address override
-  function saveAddressOverride() {
+  async function saveAddressOverride() {
     if (!editingAddress) return;
     
     let coinGeckoId: string | null = null;
@@ -89,31 +198,63 @@
       coinGeckoId = editAddressCgId.trim();
     }
     
-    dispatch('addressOverride', { 
-      contractAddress: editingAddress,
-      coinGeckoId 
-    });
+    const success = await saveOverrideToAPI('address', editingAddress, coinGeckoId);
     
-    editingAddress = null;
-    editAddressCgId = '';
+    if (success) {
+      // Update local state
+      if (coinGeckoId === null) {
+        delete addressOverrides[editingAddress];
+      } else {
+        addressOverrides[editingAddress] = coinGeckoId;
+      }
+      addressOverrides = { ...addressOverrides }; // Trigger reactivity
+      
+      // Dispatch legacy event for backward compatibility
+      dispatch('addressOverride', { 
+        contractAddress: editingAddress,
+        coinGeckoId 
+      });
+      
+      editingAddress = null;
+      editAddressCgId = '';
+    }
   }
-  
-  // Remove override
-  function removeOverride(type: 'symbol' | 'address', key: string) {
+    // Remove override
+  async function removeOverride(type: 'symbol' | 'address', key: string) {
+    let contractAddress = '';
+    
     if (type === 'symbol') {
       // Find the contract address for this symbol
       const token = availableTokens.find(t => t.symbol.toUpperCase() === key);
-      if (token) {
+      if (!token) return;
+      contractAddress = token.contractAddress;
+    } else {
+      contractAddress = key;
+    }
+    
+    const success = await saveOverrideToAPI(type, contractAddress, null);
+    
+    if (success) {
+      // Update local state
+      if (type === 'symbol') {
+        delete symbolOverrides[contractAddress];
+        symbolOverrides = { ...symbolOverrides }; // Trigger reactivity
+        
+        // Dispatch legacy event for backward compatibility
         dispatch('symbolOverride', { 
-          contractAddress: token.contractAddress,
+          contractAddress,
           symbol: null 
         });
+      } else {
+        delete addressOverrides[contractAddress];
+        addressOverrides = { ...addressOverrides }; // Trigger reactivity
+        
+        // Dispatch legacy event for backward compatibility
+        dispatch('addressOverride', { 
+          contractAddress,
+          coinGeckoId: null 
+        });
       }
-    } else {
-      dispatch('addressOverride', { 
-        contractAddress: key,
-        coinGeckoId: null 
-      });
     }
   }
   
@@ -216,15 +357,18 @@
                 >
                   ✏️ Edit
                 </button>
-                {#if hasOverride}
-                  <button
-                    type="button"
-                    on:click={() => removeOverride('symbol', symbol)}
-                    class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-md flex items-center gap-1"
-                    {disabled}
-                  >
+                {#if hasOverride}                <button
+                  type="button"
+                  on:click={() => removeOverride('symbol', symbol)}
+                  class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-md flex items-center gap-1"
+                  disabled={disabled || saving}
+                >
+                  {#if saving}
+                    <span class="animate-spin">⟳</span>
+                  {:else}
                     🗑️ Remove
-                  </button>
+                  {/if}
+                </button>
                 {/if}
               </div>
             </div>
@@ -284,14 +428,18 @@
                   </button>
                 </div>
                 
-                <div class="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <button
+                <div class="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">                  <button
                     type="button"
                     on:click={saveSymbolOverride}
                     class="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
-                    {disabled}
+                    disabled={disabled || saving}
                   >
-                    ✅ Save Override
+                    {#if saving}
+                      <span class="animate-spin">⟳</span>
+                      Saving...
+                    {:else}
+                      ✅ Save Override
+                    {/if}
                   </button>
                   <button
                     type="button"
@@ -363,15 +511,18 @@
                   {disabled}
                 >
                   ✏️ Edit
-                </button>
-                {#if hasOverride}
+                </button>                {#if hasOverride}
                   <button
                     type="button"
                     on:click={() => removeOverride('address', address)}
                     class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-md flex items-center gap-1"
-                    {disabled}
+                    disabled={disabled || saving}
                   >
-                    🗑️ Remove
+                    {#if saving}
+                      <span class="animate-spin">⟳</span>
+                    {:else}
+                      🗑️ Remove
+                    {/if}
                   </button>
                 {/if}
               </div>
@@ -422,14 +573,18 @@
                   </div>
                 {/if}
                 
-                <div class="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <button
+                <div class="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-600">                  <button
                     type="button"
                     on:click={saveAddressOverride}
                     class="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
-                    {disabled}
+                    disabled={disabled || saving}
                   >
-                    ✅ Save Override
+                    {#if saving}
+                      <span class="animate-spin">⟳</span>
+                      Saving...
+                    {:else}
+                      ✅ Save Override
+                    {/if}
                   </button>
                   <button
                     type="button"
