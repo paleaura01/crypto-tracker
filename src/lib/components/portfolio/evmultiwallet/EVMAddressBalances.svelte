@@ -673,9 +673,16 @@
       updateWallet(wallet);
       return;
     }
-
+    // Exclude tokens explicitly set to 'null' override
+    const filteredOnchain = wallet.rawOnchain.filter((token: any) => {
+      const addr = token.contract_address;
+      // wallet-specific overrides take precedence
+      if (addr in wallet.symbolOverrides && wallet.symbolOverrides[addr] === null) return false;
+      if (addr in wallet.addressOverrides && wallet.addressOverrides[addr] === null) return false;
+      return true;
+    });
     const priceResponse = get(globalPriceStore);
-    wallet.portfolio = wallet.rawOnchain.map((token: any) => {
+    wallet.portfolio = filteredOnchain.map((token: any) => {
       const balanceNum = parseFloat(token.balance);
       const id = findCoinGeckoId(token.contract_address, token.symbol, wallet.id) || '';
       const price = priceResponse && typeof priceResponse === 'object' && !('error' in priceResponse)

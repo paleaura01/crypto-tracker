@@ -169,7 +169,7 @@
       if (success) {
         // Update local state
         if (symbol === null) {
-          delete symbolOverrides[token.contractAddress];
+          symbolOverrides[token.contractAddress] = null;
         } else {
           symbolOverrides[token.contractAddress] = symbol;
         }
@@ -202,7 +202,7 @@
     if (success) {
       // Update local state
       if (coinGeckoId === null) {
-        delete addressOverrides[editingAddress];
+        addressOverrides[editingAddress] = null;
       } else {
         addressOverrides[editingAddress] = coinGeckoId;
       }
