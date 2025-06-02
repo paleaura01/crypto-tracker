@@ -1,10 +1,9 @@
 <!-- WalletSection.svelte - Individual wallet management card -->
-<script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+<script lang="ts">  import { createEventDispatcher, onMount } from 'svelte';
   import { slide } from 'svelte/transition';
   import AddressInput from '$lib/components/shared/AddressInput.svelte';
   import WalletTokenHoldings from './WalletTokenHoldings.svelte';
-  import OverrideManager from './OverrideManager.svelte';
+  import WalletSettingsModal from './WalletSettingsModal.svelte';
   import type { WalletData, GlobalPriceResp, CoinListEntry } from '$lib/components/types';
   export let wallet: WalletData;
   export let globalPriceResponse: GlobalPriceResp | null;
@@ -45,10 +44,8 @@
     const newIsExpanded = componentMounted ? localExpanded : false;
     isExpanded = newIsExpanded;
   }
-
   // Local state for wallet settings
-  let showSettings = false;
-  let activeSettingsTab: 'overrides' | 'debug' = 'overrides';
+  let showModal = false;
 
   function handleAddressSubmit(event: CustomEvent<{ address: string }>) {
     dispatch('addressSubmit', { 
@@ -86,9 +83,8 @@
     };
     dispatch('updateWallet', updatedWallet);
   }
-
   function toggleSettings() {
-    showSettings = !showSettings;
+    showModal = !showModal;
   }
   function handleSymbolOverride(event: CustomEvent<{ contractAddress: string; symbol: string | null }>) {
     const { contractAddress, symbol } = event.detail;
@@ -195,12 +191,11 @@
                 {wallet.balancesLoaded ? 'Refresh' : 'Load'}              </span>
             </button>
           {/if}
-          
-          <!-- Wallet Settings button -->
+            <!-- Wallet Settings button -->
           <button 
             class="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-            class:text-blue-500={showSettings}
-            class:bg-blue-50={showSettings}
+            class:text-blue-500={showModal}
+            class:bg-blue-50={showModal}
             on:click={toggleSettings}
             title="Wallet Settings"
             aria-label="Toggle wallet settings"
@@ -271,154 +266,8 @@
             existingAddresses={existingAddresses}
             on:submit={handleAddressSubmit}
             on:save={handleAddressSave}
-          />
-        </div>
-      </div>      <!-- Wallet Settings Panel -->
-      {#if showSettings}
-        <div transition:slide={{ duration: 300 }} class="border-t border-gray-100 bg-gray-50">
-          <div class="p-4">
-            <!-- Settings Header with Tabs -->
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex bg-white rounded-lg p-1 shadow-sm">
-                <button
-                  class="px-3 py-2 text-sm font-medium rounded-md transition-all duration-200"
-                  class:bg-blue-600={activeSettingsTab === 'overrides'}
-                  class:text-white={activeSettingsTab === 'overrides'}
-                  class:text-gray-600={activeSettingsTab !== 'overrides'}
-                  class:hover:bg-gray-100={activeSettingsTab !== 'overrides'}
-                  on:click={() => activeSettingsTab = 'overrides'}
-                >
-                  ⚙️ Overrides
-                </button>
-                <button
-                  class="px-3 py-2 text-sm font-medium rounded-md transition-all duration-200"
-                  class:bg-blue-600={activeSettingsTab === 'debug'}
-                  class:text-white={activeSettingsTab === 'debug'}
-                  class:text-gray-600={activeSettingsTab !== 'debug'}
-                  class:hover:bg-gray-100={activeSettingsTab !== 'debug'}
-                  on:click={() => activeSettingsTab = 'debug'}
-                >
-                  🔍 Debug/JSON
-                </button>
-              </div>
-              <button 
-                class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded"
-                on:click={() => showSettings = false}
-              >
-                ✕ Close
-              </button>
-            </div>
-            
-            <!-- Tab Content -->
-            {#if activeSettingsTab === 'overrides'}
-              <!-- Token Override Management -->
-              {#if wallet.portfolio.length > 0}
-                <OverrideManager 
-                  coinList={coinList}
-                  addressOverrides={wallet.addressOverrides || {}}
-                  symbolOverrides={wallet.symbolOverrides || {}}
-                  availableTokens={wallet.portfolio.map(token => ({
-                    symbol: token.symbol,
-                    contractAddress: token.contractAddress || '',
-                    chain: token.chain || ''
-                  }))}
-                  disabled={false}
-                  on:symbolOverride={handleSymbolOverride}
-                  on:addressOverride={handleAddressOverride}
-                />
-              {:else}
-                <div class="text-center py-6 text-gray-500">
-                  <div class="text-2xl mb-2">📝</div>
-                  <div class="text-sm">Load wallet tokens to configure overrides</div>
-                </div>
-              {/if}
-              
-            {:else if activeSettingsTab === 'debug'}
-              <!-- Debug and JSON Data -->
-              <div class="space-y-4">
-                
-                <!-- Wallet Info -->
-                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
-                    <h5 class="text-sm font-semibold text-gray-700">📋 Wallet Information</h5>
-                  </div>
-                  <div class="p-4">
-                    <pre class="text-xs text-gray-600 bg-gray-50 p-3 rounded border overflow-x-auto">{JSON.stringify({
-                      id: wallet.id,
-                      address: wallet.address,
-                      label: wallet.label,
-                      balancesLoaded: wallet.balancesLoaded,
-                      loadingBalances: wallet.loadingBalances,
-                      lastUpdated: wallet.lastUpdated,
-                      portfolioTokenCount: wallet.portfolio.length,
-                      rawTokenCount: wallet.rawOnchain.length,
-                      totalValue: wallet.portfolio.reduce((sum, item) => sum + item.value, 0)
-                    }, null, 2)}</pre>
-                  </div>
-                </div>
-
-                <!-- Raw On-chain Data -->
-                {#if wallet.rawOnchain.length > 0}
-                  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
-                      <h5 class="text-sm font-semibold text-gray-700">🔗 Raw On-chain Data ({wallet.rawOnchain.length} tokens)</h5>
-                    </div>
-                    <div class="p-4 max-h-64 overflow-y-auto">
-                      <pre class="text-xs text-gray-600 bg-gray-50 p-3 rounded border overflow-x-auto">{JSON.stringify(wallet.rawOnchain, null, 2)}</pre>
-                    </div>
-                  </div>
-                {/if}
-
-                <!-- Computed Portfolio Data -->
-                {#if wallet.portfolio.length > 0}
-                  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
-                      <h5 class="text-sm font-semibold text-gray-700">💰 Computed Portfolio ({wallet.portfolio.length} tokens)</h5>
-                    </div>
-                    <div class="p-4 max-h-64 overflow-y-auto">
-                      <pre class="text-xs text-gray-600 bg-gray-50 p-3 rounded border overflow-x-auto">{JSON.stringify(wallet.portfolio, null, 2)}</pre>
-                    </div>
-                  </div>
-                {/if}                <!-- Price Data for this Wallet's Tokens -->
-                {#if globalPriceResponse && wallet.portfolio.length > 0}
-                  {@const walletTokenIds = wallet.portfolio.map(t => t.coinGeckoId).filter((id): id is string => typeof id === 'string' && id.length > 0)}
-                  {@const walletPriceData = walletTokenIds.reduce((acc, id) => {
-                    if (globalPriceResponse && typeof globalPriceResponse === 'object' && !('error' in globalPriceResponse) && id && globalPriceResponse[id]) {
-                      acc[id] = globalPriceResponse[id];
-                    }
-                    return acc;
-                  }, {} as Record<string, any>)}
-                  
-                  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
-                      <h5 class="text-sm font-semibold text-gray-700">💱 Price Data for Wallet Tokens</h5>
-                    </div>
-                    <div class="p-4 max-h-64 overflow-y-auto">
-                      <pre class="text-xs text-gray-600 bg-gray-50 p-3 rounded border overflow-x-auto">{JSON.stringify(walletPriceData, null, 2)}</pre>
-                    </div>
-                  </div>
-                {/if}
-
-                <!-- Override Data -->
-                {#if (wallet.addressOverrides && Object.keys(wallet.addressOverrides).length > 0) || (wallet.symbolOverrides && Object.keys(wallet.symbolOverrides).length > 0)}
-                  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-100 px-4 py-2 border-b border-gray-200">
-                      <h5 class="text-sm font-semibold text-gray-700">🔧 Active Overrides</h5>
-                    </div>
-                    <div class="p-4">
-                      <pre class="text-xs text-gray-600 bg-gray-50 p-3 rounded border overflow-x-auto">{JSON.stringify({
-                        addressOverrides: wallet.addressOverrides || {},
-                        symbolOverrides: wallet.symbolOverrides || {}
-                      }, null, 2)}</pre>
-                    </div>
-                  </div>
-                {/if}
-                
-              </div>
-            {/if}
-          </div>
-        </div>
-      {/if}
+          />        </div>
+      </div>
 
       <!-- Token Holdings Section -->
       {#if hasTokens}
@@ -440,9 +289,19 @@
           <div class="text-4xl">🔍</div>
           <div class="text-gray-600 font-medium">Ready to load balances</div>
           <div class="text-sm text-gray-500">Click the refresh button to load token balances for this wallet</div>
-        </div>      {/if}    </div>
-  {/if}
+        </div>      {/if}    </div>  {/if}
 </div>
+
+<!-- Settings Modal -->
+<WalletSettingsModal 
+  {wallet}
+  {coinList}
+  show={showModal}
+  on:close={() => showModal = false}
+  on:symbolOverride={handleSymbolOverride}
+  on:addressOverride={handleAddressOverride}
+  on:updateWallet={(e) => dispatch('updateWallet', e.detail)}
+/>
 
 <style>
   /* Custom styles for wallet cards */
