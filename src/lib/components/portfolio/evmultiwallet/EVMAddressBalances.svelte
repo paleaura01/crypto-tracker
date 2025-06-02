@@ -986,33 +986,27 @@
     
     try {
       addDebugEvent('OVERRIDE_LOAD_START', `Loading overrides for wallet ${wallet.label || wallet.address}`);
+      // Get session for auth header
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) throw new Error('Not authenticated for loading overrides');
       
-      const response = await fetch(`/api/overrides?wallet_address=${encodeURIComponent(wallet.address)}`);
+      const response = await fetch(
+        `/api/overrides?wallet_address=${encodeURIComponent(wallet.address)}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
       const result = await response.json();
       
-      if (response.ok && result.success) {
-        const newSymbolOverrides: Record<string, string | null> = {};
-        const newAddressOverrides: Record<string, string | null> = {};
-        
-        if (result.data.wallets && result.data.wallets[wallet.address]) {
-          const walletOverrides = result.data.wallets[wallet.address];
-          
-          walletOverrides.forEach((override: any) => {
-            if (override.type === 'symbol' && override.symbol_override !== undefined) {
-              newSymbolOverrides[override.contract_address] = override.symbol_override;
-            } else if (override.type === 'address' && override.coingecko_id_override !== undefined) {
-              newAddressOverrides[override.contract_address] = override.coingecko_id_override;
-            }
-          });
-        }
-        
+      if (response.ok) {
+        const newSymbolOverrides: Record<string, string | null> = result.symbolOverrides || {};
+        const newAddressOverrides: Record<string, string | null> = result.addressOverrides || {};
+
         // Update wallet's override data
         const updatedWallet = {
           ...wallet,
           symbolOverrides: newSymbolOverrides,
           addressOverrides: newAddressOverrides
         };
-        
+
         updateWallet(updatedWallet);
         addDebugEvent('OVERRIDE_LOAD_SUCCESS', `Loaded ${Object.keys(newSymbolOverrides).length} symbol and ${Object.keys(newAddressOverrides).length} address overrides for wallet ${wallet.label || wallet.address}`);
       } else {

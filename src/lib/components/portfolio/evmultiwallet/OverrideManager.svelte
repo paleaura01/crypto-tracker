@@ -26,7 +26,7 @@
   let searchQuery = '';
   let saving = false; // Loading state for API calls
     // API helper functions
-  async function saveOverrideToAPI(type: 'symbol' | 'address', contractAddress: string, value: string | null): Promise<boolean> {
+  async function saveOverrideToAPI(type: 'symbol' | 'address', contractAddress: string, value: string | null, action: 'upsert' | 'delete' = 'upsert'): Promise<boolean> {
     if (!walletAddress || !walletId) {
       console.error('Wallet context missing for override save');
       return false;
@@ -47,8 +47,7 @@
         overrideType: type === 'symbol' ? 'symbol' : 'coingecko_id',
         overrideValue: value,
         walletAddress,
-        walletId,
-        action: value === null ? 'delete' : 'upsert'
+        action
       };
       
       const response = await fetch('/api/overrides', {
@@ -165,7 +164,7 @@
     // Find the contract address for this symbol
     const token = availableTokens.find(t => t.symbol.toUpperCase() === editingSymbol);
     if (token) {
-      const success = await saveOverrideToAPI('symbol', token.contractAddress, symbol);
+      const success = await saveOverrideToAPI('symbol', token.contractAddress, symbol, 'upsert');
       
       if (success) {
         // Update local state
@@ -198,7 +197,7 @@
       coinGeckoId = editAddressCgId.trim();
     }
     
-    const success = await saveOverrideToAPI('address', editingAddress, coinGeckoId);
+    const success = await saveOverrideToAPI('address', editingAddress, coinGeckoId, 'upsert');
     
     if (success) {
       // Update local state
@@ -232,7 +231,7 @@
       contractAddress = key;
     }
     
-    const success = await saveOverrideToAPI(type, contractAddress, null);
+    const success = await saveOverrideToAPI(type, contractAddress, null, 'delete');
     
     if (success) {
       // Update local state

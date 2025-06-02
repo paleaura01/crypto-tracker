@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auth</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Authentication Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        // Replace these with your actual Supabase config
+        const SUPABASE_URL = 'https://usmcnnvgdntpxjhhhplt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzbWNubnZnZG50cHhqaGhocGx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk4NzU5NDUsImV4cCI6MjA1NTQ1MTk0NX0.iC8-YQjKrklG1lH8xfXDfBOWE0oZ-OfNgG9p6f36Cfs';
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        async function testAuth() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Get current session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                results.innerHTML += '<h2>Current Session:</h2>';
+                results.innerHTML += `<pre>${JSON.stringify(session, null, 2)}</pre>`;
+                
+                if (session) {
+                    // Test API call with auth
+                    const response = await fetch('/api/overrides', {
+                        headers: {
+                            'Authorization': `Bearer ${session.access_token}`
+                        }
+                    });
+                    
+                    results.innerHTML += '<h2>API Response:</h2>';
+                    results.innerHTML += `<p>Status: ${response.status}</p>`;
+                    
+                    const data = await response.json();
+                    results.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    
+                    // Test token override creation
+                    const testPayload = {
+                        contractAddress: '0x1234567890123456789012345678901234567890',
+                        chain: 'eth',
+                        overrideType: 'symbol',
+                        overrideValue: 'TEST',
+                        walletAddress: '0xtest',
+                        action: 'upsert'
+                    };
+                    
+                    const createResponse = await fetch('/api/overrides', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify(testPayload)
+                    });
+                    
+                    results.innerHTML += '<h2>Create Override Response:</h2>';
+                    results.innerHTML += `<p>Status: ${createResponse.status}</p>`;
+                    
+                    const createData = await createResponse.json();
+                    results.innerHTML += `<pre>${JSON.stringify(createData, null, 2)}</pre>`;
+                    
+                } else {
+                    results.innerHTML += '<p>No active session found. Please log in first.</p>';
+                }
+                
+            } catch (error) {
+                results.innerHTML += `<h2>Error:</h2><pre>${error.message}</pre>`;
+            }
+        }
+        
+        testAuth();
+    </script>
+</body>
+</html>
