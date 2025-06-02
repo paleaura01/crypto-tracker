@@ -73,12 +73,14 @@
     const result = Array.from(tokenIds).sort();
     addDebugEvent('TOKEN_ID_RESULT', `Found ${result.length} unique token IDs: [${result.join(', ')}]`);
     return result;
-  });
-
-  // Derived store for existing wallet addresses to prevent duplicates
-  const existingAddresses = derived(walletsStore, ($wallets) => {
-    return $wallets.map(wallet => wallet.address.toLowerCase()).filter(Boolean);
-  });
+  });  // Function to get existing addresses excluding a specific wallet
+  function getExistingAddressesExcluding(walletId: string): string[] {
+    const wallets = get(walletsStore);
+    return wallets
+      .filter(wallet => wallet.id !== walletId)
+      .map(wallet => wallet.address.toLowerCase())
+      .filter(Boolean);
+  }
 
   // Reactive computed values
   $: wallets = $walletsStore;
@@ -1047,13 +1049,12 @@
     on:loadAllPrices={loadAllPrices}
   />
   <!-- Individual Wallet Sections -->
-  <div class="space-y-4">
-    {#each wallets as wallet, index (wallet.id)}      <WalletSection
+  <div class="space-y-4">    {#each wallets as wallet, index (wallet.id)}      <WalletSection
         {wallet}
         walletIndex={index}
         globalPriceResponse={$globalPriceStore}
         {coinList}
-        existingAddresses={$existingAddresses}
+        existingAddresses={getExistingAddressesExcluding(wallet.id)}
         on:updateWallet={(e) => updateWallet(e.detail)}
         on:removeWallet={(e) => removeWallet(e.detail)}
         on:loadBalances={(e) => loadWalletBalances(e.detail)}

@@ -38,8 +38,17 @@
   function handleInput(event: Event) {
     const target = event.target as HTMLInputElement;
     address = target.value;
-    isValid = validateAddress(address);
-    isDuplicate = checkDuplicate(address);
+    
+    // DEBUG: Log the validation states
+    console.log('AddressInput Debug:', {
+      address: address,
+      isValid: isValid,
+      isDuplicate: isDuplicate,
+      existingAddresses: existingAddresses,
+      addressLength: address.length,
+      regex: /^0x[a-fA-F0-9]{40}$/.test(address)
+    });
+    
     saveSuccess = false;
     saveError = '';
     
@@ -158,12 +167,16 @@
       // Use MCP service for direct database access
       const result = await supabaseMCPWalletService.getWalletAddresses();      if (result.success && result.data) {
         // Map WalletData to the expected interface
-        savedAddresses = result.data.map(wallet => ({
+        const mapped = result.data.map(wallet => ({
           id: wallet.id,
           address: wallet.address,
           label: wallet.label,
           blockchain: 'ethereum' // Default blockchain for all wallets
         }));
+        // Deduplicate by address
+        savedAddresses = mapped.filter((item, index, self) =>
+          self.findIndex(v => v.address.toLowerCase() === item.address.toLowerCase()) === index
+        );
       } else {
         savedAddresses = [];
       }
@@ -211,14 +224,14 @@
       console.error('Failed to remove address via MCP:', err);
     }
   }
-  
-  // Load saved addresses on component mount
+    // Load saved addresses on component mount
   onMount(() => {
     if (showSaveButton) {
       loadSavedAddresses();
     }
   });
   
+  // Recompute validity and duplicate flags when address or existing list changes
   $: isValid = validateAddress(address);
   $: isDuplicate = checkDuplicate(address);
 </script>
