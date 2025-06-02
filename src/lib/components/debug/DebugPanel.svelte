@@ -253,9 +253,8 @@
         <div class="event-item info">
           DEBUG: streamEvents type = {typeof debugInfo.streamEvents}
         </div>
-        
-        {#if debugInfo.streamEvents && debugInfo.streamEvents.length > 0}
-          {#each debugInfo.streamEvents as event, index (event.timestamp || index)}
+          {#if debugInfo.streamEvents && debugInfo.streamEvents.length > 0}
+          {#each debugInfo.streamEvents as event, index (`${event.timestamp}-${index}`)}
             <div class="event-item {event.type.toLowerCase().replace('_', '-')}">
               {formatDebugEvent(event)}
             </div>

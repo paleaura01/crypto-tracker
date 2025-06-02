@@ -57,8 +57,7 @@
     return $wallets.reduce((total, wallet) => 
       total + wallet.portfolio.reduce((sum, item) => sum + item.value, 0), 0
     );
-  });
-  const allUniqueTokenIds = derived(walletsStore, ($wallets) => {
+  });  const allUniqueTokenIds = derived(walletsStore, ($wallets) => {
     const tokenIds = new Set<string>();
     addDebugEvent('TOKEN_ID_DERIVE', `Deriving token IDs from ${$wallets.length} wallets, coinList has ${coinList.length} coins`);
     
@@ -74,6 +73,11 @@
     const result = Array.from(tokenIds).sort();
     addDebugEvent('TOKEN_ID_RESULT', `Found ${result.length} unique token IDs: [${result.join(', ')}]`);
     return result;
+  });
+
+  // Derived store for existing wallet addresses to prevent duplicates
+  const existingAddresses = derived(walletsStore, ($wallets) => {
+    return $wallets.map(wallet => wallet.address.toLowerCase()).filter(Boolean);
   });
 
   // Reactive computed values
@@ -268,21 +272,24 @@
       let restoredWallets: WalletData[] = [];
       
       if (walletResult.success && walletResult.data) {
-        const walletData = walletResult.data as { wallets: any[] };
-        if (walletData.wallets && walletData.wallets.length > 0) {
-          restoredWallets = walletData.wallets.map((saved: any) => ({
-            id: saved.id,
-            address: saved.address || '',
-            label: saved.label || '',
-            rawOnchain: [],
-            portfolio: [],
-            loadingBalances: false,
-            balancesLoaded: false,
-            error: '',
-            addressOverrides: saved.addressOverrides || {},
-            symbolOverrides: saved.symbolOverrides || {},
-            expanded: saved.expanded !== false
-          }));
+        const walletData = walletResult.data as { wallets: any[] };        if (walletData.wallets && walletData.wallets.length > 0) {
+          restoredWallets = walletData.wallets.map((saved: any, index: number) => {
+            const restoredWallet = {
+              id: saved.id,
+              address: saved.address || '',
+              label: saved.label || '',
+              rawOnchain: [],
+              portfolio: [],
+              loadingBalances: false,
+              balancesLoaded: false,
+              error: '',
+              addressOverrides: saved.addressOverrides || {},
+              symbolOverrides: saved.symbolOverrides || {},
+              expanded: saved.expanded !== false
+            };
+            addDebugEvent('DB_WALLET_RESTORE', `Wallet ${index} (${saved.id}): expanded=${restoredWallet.expanded}, saved.expanded=${saved.expanded}`);
+            return restoredWallet;
+          });
           addDebugEvent('DB_LOAD', `Loaded ${restoredWallets.length} wallets from wallet_settings`);
         }
       }
@@ -291,14 +298,20 @@
       try {
         addDebugEvent('DB_LOAD_START', 'Loading wallet addresses via MCP service');
         const addressResult = await supabaseMCPWalletService.getWalletAddresses();
-        
-        if (addressResult.success && addressResult.data) {
+          if (addressResult.success && addressResult.data) {
           const savedAddresses = addressResult.data;
           const existingAddresses = new Set(restoredWallets.map(w => w.address.toLowerCase()));
           
           // Create wallet entries for addresses that don't already exist
           const newWallets: WalletData[] = savedAddresses
-            .filter((addr: any) => addr.address && !existingAddresses.has(addr.address.toLowerCase()))
+            .filter((addr: any) => {
+              const addressLower = addr.address?.toLowerCase();
+              const isValid = addr.address && addressLower && !existingAddresses.has(addressLower);
+              if (!isValid && addr.address) {
+                addDebugEvent('DB_DUPLICATE_SKIPPED', `Skipped duplicate address from database: ${addr.address}`);
+              }
+              return isValid;
+            })
             .map((addr: any) => ({
               id: `wallet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               address: addr.address,
@@ -464,13 +477,31 @@
       addDebugEvent('PORTFOLIO_INIT', 'Computing portfolios from cached data');
       await recomputeAllPortfolios();
     }
-  }
-  // Multi-wallet management functions
+  }  // Multi-wallet management functions
   async function addWallet(address: string = '', label: string = ''): Promise<string> {
+    const trimmedAddress = address.trim();
+    
+    // Check for duplicate addresses if address is provided
+    if (trimmedAddress) {
+      const existingWallets = get(walletsStore);
+      const duplicateWallet = existingWallets.find(wallet => 
+        wallet.address.toLowerCase() === trimmedAddress.toLowerCase()
+      );
+      
+      if (duplicateWallet) {
+        const duplicateLabel = duplicateWallet.label || `Wallet ${duplicateWallet.address.slice(0, 8)}...`;
+        addDebugEvent('WALLET_DUPLICATE_PREVENTED', `Prevented duplicate wallet: ${trimmedAddress} (already exists as "${duplicateLabel}")`);
+        
+        // Show user-friendly error
+        alert(`This wallet address is already added as "${duplicateLabel}". Please use a different address.`);
+        return duplicateWallet.id; // Return existing wallet ID
+      }
+    }
+    
     const walletId = `wallet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newWallet: WalletData = {
       id: walletId,
-      address: address.trim(),
+      address: trimmedAddress,
       label: label || `Wallet ${walletsCount + 1}`,
       rawOnchain: [],
       portfolio: [],
@@ -483,9 +514,9 @@
     };
     
     walletsStore.update(wallets => [...wallets, newWallet]);
-    addDebugEvent('WALLET_ADDED', `Added wallet: ${label || address || 'Empty wallet'}`);
+    addDebugEvent('WALLET_ADDED', `Added wallet: ${label || trimmedAddress || 'Empty wallet'}`);
     return walletId;
-  }  async function removeWallet(walletId: string) {
+  }async function removeWallet(walletId: string) {
     const wallets = get(walletsStore);
     const wallet = wallets.find((w: WalletData) => w.id === walletId);
     
@@ -518,12 +549,18 @@
     // Remove from local store
     walletsStore.update((wallets: WalletData[]) => wallets.filter((w: WalletData) => w.id !== walletId));
     addDebugEvent('WALLET_REMOVED', `Removed wallet locally: ${wallet.label || wallet.address || walletId}`);
-  }
-
-  function updateWallet(updatedWallet: WalletData) {
+  }  function updateWallet(updatedWallet: WalletData) {
+    console.log('[EVMAddressBalances] updateWallet called for:', updatedWallet.id);
+    console.log('[EVMAddressBalances] updateWallet expanded state:', updatedWallet.expanded);
+    console.log('[EVMAddressBalances] updateWallet full data:', updatedWallet);
+    
+    // Just update the store directly without any sanitization
+    // Let the wallet component handle its own expansion state
     walletsStore.update((wallets: WalletData[]) => 
       wallets.map((w: WalletData) => w.id === updatedWallet.id ? updatedWallet : w)
     );
+    
+    console.log('[EVMAddressBalances] walletsStore updated');
   }
   // Individual wallet balance loading
   async function loadWalletBalances(walletId: string) {
@@ -858,13 +895,30 @@
   // Event handlers
   async function handleAddWallet() {
     await addWallet();
-  }
-  // Handle address save events from wallet sections - Using MCP Service
+  }  // Handle address save events from wallet sections - Using MCP Service
   async function handleAddressSave(event: CustomEvent<{ walletId: string; address: string; label?: string }>) {
     const { walletId, address, label } = event.detail;
     
     if (!address?.trim()) {
       addDebugEvent('ADDRESS_SAVE_ERROR', 'Cannot save empty address');
+      return;
+    }
+
+    const trimmedAddress = address.trim();
+    
+    // Check for duplicate addresses in other wallets
+    const existingWallets = get(walletsStore);
+    const duplicateWallet = existingWallets.find(wallet => 
+      wallet.id !== walletId && // Exclude current wallet
+      wallet.address.toLowerCase() === trimmedAddress.toLowerCase()
+    );
+    
+    if (duplicateWallet) {
+      const duplicateLabel = duplicateWallet.label || `Wallet ${duplicateWallet.address.slice(0, 8)}...`;
+      addDebugEvent('ADDRESS_DUPLICATE_PREVENTED', `Prevented duplicate address save: ${trimmedAddress} (already exists as "${duplicateLabel}")`);
+      
+      // Show user-friendly error
+      alert(`This wallet address is already used by "${duplicateLabel}". Please use a different address.`);
       return;
     }
 
@@ -875,21 +929,21 @@
     }
 
     try {
-      addDebugEvent('ADDRESS_SAVE_START', `Saving address via MCP for wallet ${walletId}: ${address}`);
+      addDebugEvent('ADDRESS_SAVE_START', `Saving address via MCP for wallet ${walletId}: ${trimmedAddress}`);
         // Use MCP service for direct database access
       const result = await supabaseMCPWalletService.saveWalletAddress({
         id: walletId,
-        address: address.trim(),
-        label: label?.trim() || `Wallet ${address.slice(0, 8)}...`
+        address: trimmedAddress,
+        label: label?.trim() || `Wallet ${trimmedAddress.slice(0, 8)}...`
       });
 
       if (result.success) {
-        addDebugEvent('ADDRESS_SAVE_SUCCESS', `Successfully saved address via MCP for wallet ${walletId}: ${address}${label ? ` (${label})` : ''}`);
+        addDebugEvent('ADDRESS_SAVE_SUCCESS', `Successfully saved address via MCP for wallet ${walletId}: ${trimmedAddress}${label ? ` (${label})` : ''}`);
           // Update the wallet in the store with the saved data
         const wallets = get(walletsStore);
         const walletIndex = wallets.findIndex(w => w.id === walletId);
         if (walletIndex !== -1 && wallets[walletIndex]) {
-          wallets[walletIndex].address = address.trim();
+          wallets[walletIndex].address = trimmedAddress;
           if (label?.trim()) {
             wallets[walletIndex].label = label.trim();
           }
@@ -993,10 +1047,13 @@
     on:loadAllPrices={loadAllPrices}
   />
   <!-- Individual Wallet Sections -->
-  <div class="space-y-4">    {#each wallets as wallet (wallet.id)}      <WalletSection
+  <div class="space-y-4">
+    {#each wallets as wallet, index (wallet.id)}      <WalletSection
         {wallet}
+        walletIndex={index}
         globalPriceResponse={$globalPriceStore}
         {coinList}
+        existingAddresses={$existingAddresses}
         on:updateWallet={(e) => updateWallet(e.detail)}
         on:removeWallet={(e) => removeWallet(e.detail)}
         on:loadBalances={(e) => loadWalletBalances(e.detail)}

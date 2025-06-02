@@ -86,11 +86,9 @@
         </span>
       {/if}
     </div>
-  </div>
-
-  <!-- Token List -->
+  </div>  <!-- Token List -->
   <div class="max-h-80 overflow-y-auto">
-    {#each sortedPortfolio as token (token.contractAddress || token.symbol)}
+    {#each sortedPortfolio as token, index (`${wallet.id}-${token.contractAddress || token.symbol}-${index}`)}
       <div class="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
         <div class="flex items-center justify-between">
           

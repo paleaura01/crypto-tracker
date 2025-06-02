@@ -1,13 +1,16 @@
 <!-- WalletSection.svelte - Individual wallet management card -->
-<script lang="ts">  import { createEventDispatcher } from 'svelte';
+<script lang="ts">
+  import { createEventDispatcher, onMount } from 'svelte';
   import { slide } from 'svelte/transition';
   import AddressInput from '$lib/components/shared/AddressInput.svelte';
   import WalletTokenHoldings from './WalletTokenHoldings.svelte';
   import OverrideManager from './OverrideManager.svelte';
-  import type { WalletData, GlobalPriceResp, CoinListEntry } from '$lib/components/types';  export let wallet: WalletData;
+  import type { WalletData, GlobalPriceResp, CoinListEntry } from '$lib/components/types';
+  export let wallet: WalletData;
   export let globalPriceResponse: GlobalPriceResp | null;
   export let walletIndex: number = 0;
   export let coinList: CoinListEntry[] = [];
+  export let existingAddresses: string[] = [];
 
   const dispatch = createEventDispatcher<{
     updateWallet: WalletData;
@@ -27,11 +30,23 @@
     'from-orange-500 to-orange-600',
     'from-teal-500 to-teal-600',
     'from-red-500 to-red-600'
-  ];
-  $: accentColor = accentColors[walletIndex % accentColors.length] || 'from-blue-500 to-blue-600';
+  ];  $: accentColor = accentColors[walletIndex % accentColors.length] || 'from-blue-500 to-blue-600';
   $: portfolioValue = wallet.portfolio.reduce((sum, item) => sum + item.value, 0);
   $: hasTokens = wallet.portfolio.length > 0;
-    // Local state for wallet settings
+  // Create a completely isolated expansion state
+  let localExpanded = false;
+  let componentMounted = false;onMount(() => {
+    // Initialize expansion state only once when component mounts
+    localExpanded = wallet.expanded ?? false;
+    componentMounted = true;
+  });  // Use localExpanded for UI decisions
+  let isExpanded = false;
+  $: {
+    const newIsExpanded = componentMounted ? localExpanded : false;
+    isExpanded = newIsExpanded;
+  }
+
+  // Local state for wallet settings
   let showSettings = false;
   let activeSettingsTab: 'overrides' | 'debug' = 'overrides';
 
@@ -48,14 +63,14 @@
       address: detail.address, 
       ...(detail.label ? { label: detail.label } : {})
     });
-  }
-
-  function toggleExpanded() {
-    wallet.expanded = !wallet.expanded;
-    dispatch('updateWallet', wallet);
-  }
-  function loadBalances() {
-    console.log('[WalletSection] loadBalances called for wallet:', wallet.id, wallet.label || wallet.address);
+  }  function toggleExpanded() {
+    if (!componentMounted) return;
+    
+    // Toggle local state
+    localExpanded = !localExpanded;
+    
+    // Don't dispatch any updates to parent - keep expansion state purely local
+  }  function loadBalances() {
     dispatch('loadBalances', wallet.id);
   }
 
@@ -65,40 +80,47 @@
     }
   }  function updateLabel(newLabel: string) {
     const trimmedLabel = newLabel.trim();
-    if (trimmedLabel) {
-      wallet.label = trimmedLabel;
-    } else {
-      delete wallet.label;
-    }
-    dispatch('updateWallet', wallet);
+    const updatedWallet: WalletData = {
+      ...wallet,
+      ...(trimmedLabel ? { label: trimmedLabel } : {})
+    };
+    dispatch('updateWallet', updatedWallet);
   }
 
   function toggleSettings() {
     showSettings = !showSettings;
   }
-
   function handleSymbolOverride(event: CustomEvent<{ contractAddress: string; symbol: string | null }>) {
     const { contractAddress, symbol } = event.detail;
-    if (!wallet.symbolOverrides) wallet.symbolOverrides = {};
+    const updatedOverrides = { ...(wallet.symbolOverrides || {}) };
     
     if (symbol) {
-      wallet.symbolOverrides[contractAddress] = symbol;
+      updatedOverrides[contractAddress] = symbol;
     } else {
-      delete wallet.symbolOverrides[contractAddress];
+      delete updatedOverrides[contractAddress];
     }
-    dispatch('updateWallet', wallet);
+    
+    const updatedWallet = {
+      ...wallet,
+      symbolOverrides: updatedOverrides
+    };
+    dispatch('updateWallet', updatedWallet);
   }
-
   function handleAddressOverride(event: CustomEvent<{ contractAddress: string; coinGeckoId: string | null }>) {
     const { contractAddress, coinGeckoId } = event.detail;
-    if (!wallet.addressOverrides) wallet.addressOverrides = {};
+    const updatedOverrides = { ...(wallet.addressOverrides || {}) };
     
     if (coinGeckoId) {
-      wallet.addressOverrides[contractAddress] = coinGeckoId;
+      updatedOverrides[contractAddress] = coinGeckoId;
     } else {
-      delete wallet.addressOverrides[contractAddress];
+      delete updatedOverrides[contractAddress];
     }
-    dispatch('updateWallet', wallet);
+    
+    const updatedWallet = {
+      ...wallet,
+      addressOverrides: updatedOverrides
+    };
+    dispatch('updateWallet', updatedWallet);
   }
 </script>
 
@@ -118,10 +140,9 @@
         <button 
           class="flex items-center gap-3 text-left flex-1 hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors duration-200"
           on:click={toggleExpanded}
-        >
-          <!-- Expand/collapse icon -->
+        >          <!-- Expand/collapse icon -->
           <div class="text-gray-400 transition-transform duration-200" 
-               class:rotate-180={wallet.expanded}>
+               class:rotate-180={isExpanded}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="6,9 12,15 18,9"></polyline>
             </svg>
@@ -217,10 +238,8 @@
         </div>
       {/if}
     </div>
-  </div>
-
-  <!-- Expandable Content -->
-  {#if wallet.expanded}
+  </div>  <!-- Expandable Content -->
+  {#if isExpanded}
     <div transition:slide={{ duration: 300 }} class="border-t border-gray-100">
       
       <!-- Wallet Controls Section -->
@@ -244,14 +263,15 @@
         <div class="space-y-2">
           <label for="wallet-address-{wallet.id}" class="block text-sm font-medium text-gray-700">
             Wallet Address
-          </label>
-          <AddressInput 
+          </label>          <AddressInput 
             bind:address={wallet.address}
             loading={wallet.loadingBalances}
             error={wallet.error}
             placeholder="Enter EVM wallet address (0x...)"
+            existingAddresses={existingAddresses}
             on:submit={handleAddressSubmit}
-            on:save={handleAddressSave}          />
+            on:save={handleAddressSave}
+          />
         </div>
       </div>      <!-- Wallet Settings Panel -->
       {#if showSettings}
@@ -420,9 +440,7 @@
           <div class="text-4xl">🔍</div>
           <div class="text-gray-600 font-medium">Ready to load balances</div>
           <div class="text-sm text-gray-500">Click the refresh button to load token balances for this wallet</div>
-        </div>
-      {/if}
-    </div>
+        </div>      {/if}    </div>
   {/if}
 </div>
 

@@ -2,43 +2,59 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { supabaseMCPWalletService } from '$lib/services/supabase-mcp-wallet-service';
   import { authService } from '$lib/services/auth-service';
-  
-  export let address: string = '';
+    export let address: string = '';
   export let loading: boolean = false;
   export let error: string = '';
   export let placeholder: string = 'Enter wallet address (0x...)';
   export let disabled: boolean = false;
   export let showSaveButton: boolean = true;
+  export let existingAddresses: string[] = [];
     const dispatch = createEventDispatcher<{
     submit: { address: string };
     clear: void;
     change: { address: string };
     save: { address: string; label?: string | undefined };
   }>();
-  
-  let isValid = false;
+    let isValid = false;
   let saving = false;
   let saveError = '';
   let saveSuccess = false;
   let addressLabel = '';
   let showSaveForm = false;
-  let savedAddresses: Array<{ id: string; address: string; label?: string; blockchain: string }> = [];  
-  // Validate Ethereum address format
+  let savedAddresses: Array<{ id: string; address: string; label?: string; blockchain: string }> = [];
+  let isDuplicate = false;  // Validate Ethereum address format
   function validateAddress(addr: string): boolean {
     return /^0x[a-fA-F0-9]{40}$/.test(addr);
   }
   
-  // Handle address input changes
+  // Check if address is duplicate
+  function checkDuplicate(addr: string): boolean {
+    if (!addr || !addr.trim()) return false;
+    return existingAddresses.some(existing => 
+      existing.toLowerCase() === addr.toLowerCase()
+    );
+  }
+    // Handle address input changes
   function handleInput(event: Event) {
     const target = event.target as HTMLInputElement;
     address = target.value;
     isValid = validateAddress(address);
+    isDuplicate = checkDuplicate(address);
     saveSuccess = false;
     saveError = '';
+    
+    // Set error if duplicate is detected
+    if (isDuplicate && address.trim()) {
+      error = 'This wallet address is already added';
+    } else if (address.trim() && !isValid) {
+      error = 'Please enter a valid Ethereum address';
+    } else {
+      error = '';
+    }
+    
     dispatch('change', { address });
   }
-  
-  // Handle form submission
+    // Handle form submission
   function handleSubmit(event: Event) {
     event.preventDefault();
     if (!address.trim()) {
@@ -51,15 +67,20 @@
       return;
     }
     
+    if (isDuplicate) {
+      error = 'This wallet address is already added';
+      return;
+    }
+    
     error = '';
     dispatch('submit', { address: address.trim() });
   }
-  
-  // Clear the address input
+    // Clear the address input
   function handleClear() {
     address = '';
     error = '';
     isValid = false;
+    isDuplicate = false;
     saveSuccess = false;
     saveError = '';
     showSaveForm = false;
@@ -74,11 +95,15 @@
     if (showSaveForm) {
       addressLabel = '';
     }
-  }
-    // Save address to Supabase using MCP service
+  }    // Save address to Supabase using MCP service
   async function saveAddress() {
     if (!address.trim() || !isValid) {
       saveError = 'Please enter a valid address first';
+      return;
+    }
+    
+    if (isDuplicate) {
+      saveError = 'This wallet address is already added';
       return;
     }
     
@@ -147,11 +172,16 @@
       savedAddresses = [];
     }
   }
-  
-  // Load an address from saved list
+    // Load an address from saved list
   function loadSavedAddress(savedAddress: string) {
     address = savedAddress;
     isValid = validateAddress(address);
+    isDuplicate = checkDuplicate(address);
+    if (isDuplicate) {
+      error = 'This wallet address is already added';
+    } else {
+      error = '';
+    }
     dispatch('change', { address });
   }
     // Remove saved address using MCP service
@@ -182,7 +212,7 @@
     }
   }
   
-    // Load saved addresses on component mount
+  // Load saved addresses on component mount
   onMount(() => {
     if (showSaveButton) {
       loadSavedAddresses();
@@ -190,6 +220,7 @@
   });
   
   $: isValid = validateAddress(address);
+  $: isDuplicate = checkDuplicate(address);
 </script>
 
 <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -197,8 +228,7 @@
     <div class="flex flex-col lg:flex-row gap-4">
       <div class="flex-1 relative">        <label for="wallet-address-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Wallet Address
-        </label>
-        <input
+        </label>        <input
           id="wallet-address-input"
           type="text"
           bind:value={address}
@@ -206,8 +236,9 @@
           {placeholder}
           {disabled}
           class="w-full px-4 py-3 text-sm font-mono border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400
-            {isValid && address ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-            {address && !isValid ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
+            {isDuplicate && address ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : ''}
+            {isValid && address && !isDuplicate ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
+            {address && !isValid && !isDuplicate ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
             {!address ? 'border-gray-300 dark:border-gray-600' : ''}"
         />
         {#if address}
@@ -223,11 +254,10 @@
         {/if}
       </div>
       
-      <div class="flex flex-col gap-3 lg:self-end">
-        <button
+      <div class="flex flex-col gap-3 lg:self-end">        <button
           type="submit"
           class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg disabled:hover:shadow-none flex items-center justify-center gap-2 whitespace-nowrap min-w-[140px]"
-          disabled={loading || !isValid || disabled}
+          disabled={loading || !isValid || isDuplicate || disabled}
         >
           {#if loading}
             <div class="w-4 h-4 border-2 border-transparent border-t-white rounded-full animate-spin"></div>
@@ -236,8 +266,7 @@
             🔍 Get Balance
           {/if}
         </button>
-        
-        {#if showSaveButton && isValid && address}
+          {#if showSaveButton && isValid && address && !isDuplicate}
           <button
             type="button"
             on:click={toggleSaveForm}
