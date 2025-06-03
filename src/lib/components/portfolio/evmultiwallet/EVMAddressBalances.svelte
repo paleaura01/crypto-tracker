@@ -667,36 +667,72 @@
   }
 
   // Portfolio computation functions
-  async function computeWalletPortfolio(wallet: WalletData) {
-    if (!wallet.rawOnchain.length) {
+  async function computeWalletPortfolio(wallet: WalletData) {    if (!wallet.rawOnchain.length) {
       wallet.portfolio = [];
       updateWallet(wallet);
       return;
     }
-    // Exclude tokens explicitly set to 'null' override
-    const filteredOnchain = wallet.rawOnchain.filter((token: any) => {
+      const priceResponse = get(globalPriceStore);    // Include ALL tokens but mark excluded ones and active overrides with status
+    wallet.portfolio = wallet.rawOnchain.map((token: any) => {
       const addr = token.contract_address;
-      // wallet-specific overrides take precedence
-      if (addr in wallet.symbolOverrides && wallet.symbolOverrides[addr] === null) return false;
-      if (addr in wallet.addressOverrides && wallet.addressOverrides[addr] === null) return false;
-      return true;
-    });
-    const priceResponse = get(globalPriceStore);
-    wallet.portfolio = filteredOnchain.map((token: any) => {
+      const symbol = token.symbol.toUpperCase();
       const balanceNum = parseFloat(token.balance);
-      const id = findCoinGeckoId(token.contract_address, token.symbol, wallet.id) || '';
-      const price = priceResponse && typeof priceResponse === 'object' && !('error' in priceResponse)
-        ? (priceResponse as any)[id]?.usd || 0
-        : 0;
+      
+      // Check for exclusion overrides (wallet-specific)
+      const isSymbolExcluded = symbol in wallet.symbolOverrides && wallet.symbolOverrides[symbol] === null;
+      const isAddressExcluded = addr in wallet.addressOverrides && wallet.addressOverrides[addr] === null;
+      
+      // Check for global exclusion overrides
+      const globalSymOverrides = get(globalSymbolOverrides);
+      const globalAddrOverrides = get(globalAddressOverrides);
+      const isGlobalSymbolExcluded = symbol in globalSymOverrides && globalSymOverrides[symbol] === null;
+      const isGlobalAddressExcluded = addr in globalAddrOverrides && globalAddrOverrides[addr] === null;
+      
+      const isOverrideExcluded = isSymbolExcluded || isAddressExcluded || isGlobalSymbolExcluded || isGlobalAddressExcluded;
+      
+      // Check for active overrides (non-null, wallet-specific)
+      const hasSymbolOverride = symbol in wallet.symbolOverrides && wallet.symbolOverrides[symbol] !== null;
+      const hasAddressOverride = addr in wallet.addressOverrides && wallet.addressOverrides[addr] !== null;
+      
+      // Check for global active overrides (non-null)
+      const hasGlobalSymbolOverride = symbol in globalSymOverrides && globalSymOverrides[symbol] !== null;
+      const hasGlobalAddressOverride = addr in globalAddrOverrides && globalAddrOverrides[addr] !== null;
+      
+      const hasActiveOverride = hasSymbolOverride || hasAddressOverride || hasGlobalSymbolOverride || hasGlobalAddressOverride;
+        // Determine override type - prioritize exclusions, then actives
+      let overrideType: 'symbol' | 'address' | null = null;
+      if (isSymbolExcluded || isGlobalSymbolExcluded) {
+        overrideType = 'symbol';
+      } else if (isAddressExcluded || isGlobalAddressExcluded) {
+        overrideType = 'address';
+      } else if (hasSymbolOverride || hasGlobalSymbolOverride) {
+        overrideType = 'symbol';
+      } else if (hasAddressOverride || hasGlobalAddressOverride) {
+        overrideType = 'address';
+      }
+      
+      // For excluded tokens, set price to 0 and don't calculate value
+      let price = 0;
+      let coinGeckoId = '';
+      
+      if (!isOverrideExcluded) {
+        coinGeckoId = findCoinGeckoId(token.contract_address, token.symbol, wallet.id) || '';
+        price = priceResponse && typeof priceResponse === 'object' && !('error' in priceResponse)
+          ? (priceResponse as any)[coinGeckoId]?.usd || 0
+          : 0;
+      }
       
       return {
-        symbol: getSymbolForToken(token.contract_address, token.symbol, wallet.id),
+        symbol: token.symbol, // Use original symbol, not the override
         balance: balanceNum,
         contractAddress: token.contract_address,
         chain: token.chain,
-        coinGeckoId: id || null,
+        coinGeckoId: coinGeckoId || null,
         price,
-        value: balanceNum * price
+        value: isOverrideExcluded ? 0 : balanceNum * price,
+        isOverrideExcluded,
+        overrideType,
+        hasActiveOverride // Add this to track non-excluded overrides
       };
     });
     
@@ -711,21 +747,47 @@
         await computeWalletPortfolio(wallet);
       }
     }
-  }
-  // Enhanced CoinGecko ID finder with wallet-specific overrides
+  }  // Enhanced CoinGecko ID finder with wallet-specific overrides
   function findCoinGeckoId(contractAddress: string, symbol: string, walletId?: string): string | null {
     addDebugEvent('FIND_COINGECKO_START', `Looking for CoinGecko ID: ${symbol} (${contractAddress}), coinList length: ${coinList.length}`);
+    
+    const symbolKey = symbol.toUpperCase();
     
     // Check wallet-specific overrides first
     if (walletId) {
       const wallet = get(walletsStore).find((w: WalletData) => w.id === walletId);
+      
+      // Check if token is excluded via symbol override
+      if (wallet?.symbolOverrides[symbolKey] === null) {
+        addDebugEvent('FIND_COINGECKO_SYMBOL_EXCLUDED', `Token ${symbol} excluded via symbol override`);
+        return null;
+      }
+      
+      // Check for explicit CoinGecko ID override via symbol override
+      if (wallet?.symbolOverrides[symbolKey]) {
+        addDebugEvent('FIND_COINGECKO_SYMBOL_OVERRIDE', `Found wallet symbol override for ${symbol}: ${wallet.symbolOverrides[symbolKey]}`);
+        return wallet.symbolOverrides[symbolKey];
+      }
+      
+      // Check address overrides
       if (wallet?.addressOverrides[contractAddress]) {
         addDebugEvent('FIND_COINGECKO_WALLET_OVERRIDE', `Found wallet override for ${contractAddress}: ${wallet.addressOverrides[contractAddress]}`);
         return wallet.addressOverrides[contractAddress];
       }
     }
 
-    // Check global overrides
+    // Check global symbol overrides
+    const globalSymOverrides = get(globalSymbolOverrides);
+    if (globalSymOverrides[symbolKey] === null) {
+      addDebugEvent('FIND_COINGECKO_GLOBAL_SYMBOL_EXCLUDED', `Token ${symbol} excluded via global symbol override`);
+      return null;
+    }
+    if (globalSymOverrides[symbolKey]) {
+      addDebugEvent('FIND_COINGECKO_GLOBAL_SYMBOL_OVERRIDE', `Found global symbol override for ${symbol}: ${globalSymOverrides[symbolKey]}`);
+      return globalSymOverrides[symbolKey];
+    }
+
+    // Check global address overrides
     const globalAddrOverrides = get(globalAddressOverrides);
     if (globalAddrOverrides[contractAddress]) {
       addDebugEvent('FIND_COINGECKO_GLOBAL_OVERRIDE', `Found global override for ${contractAddress}: ${globalAddrOverrides[contractAddress]}`);
@@ -756,21 +818,22 @@
     addDebugEvent('FIND_COINGECKO_NO_MATCH', `No CoinGecko ID found for ${symbol} (${contractAddress})`);
     return null;
   }
-
   // Enhanced symbol getter with wallet-specific overrides
   function getSymbolForToken(contractAddress: string, defaultSymbol: string, walletId?: string): string {
-    // Check wallet-specific symbol overrides first
+    const symbolKey = defaultSymbol.toUpperCase();
+    
+    // Check wallet-specific symbol overrides first (by symbol name, not contract address)
     if (walletId) {
       const wallet = get(walletsStore).find((w: WalletData) => w.id === walletId);
-      if (wallet?.symbolOverrides[contractAddress]) {
-        return wallet.symbolOverrides[contractAddress] || defaultSymbol;
+      if (wallet?.symbolOverrides[symbolKey]) {
+        return wallet.symbolOverrides[symbolKey] || defaultSymbol;
       }
     }
 
-    // Check global symbol overrides
+    // Check global symbol overrides (by symbol name, not contract address)
     const globalSymOverrides = get(globalSymbolOverrides);
-    if (globalSymOverrides[contractAddress]) {
-      return globalSymOverrides[contractAddress] || defaultSymbol;
+    if (globalSymOverrides[symbolKey]) {
+      return globalSymOverrides[symbolKey] || defaultSymbol;
     }
 
     return defaultSymbol;

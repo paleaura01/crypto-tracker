@@ -44,7 +44,7 @@
       const payload: any = {
         contractAddress: contractAddress.toLowerCase(),
         chain: 'eth',
-        overrideType: type === 'symbol' ? 'symbol' : 'coingecko_id',
+        overrideType: type === 'symbol' ? 'symbol' : 'address',
         overrideValue: value,
         walletAddress,
         action
@@ -93,23 +93,9 @@
           'Authorization': `Bearer ${session.access_token}`
         }
       });
-      const result = await response.json();
-        if (response.ok) {
-        // Process symbol overrides - map from contract address to symbol correctly
-        const newSymbolOverrides: Record<string, string | null> = {};
-        const symbolOverridesData = result.symbolOverrides || {};
-        
-        // Map overrides from contract address to symbol using availableTokens
-        for (const [contractAddress, overrideValue] of Object.entries(symbolOverridesData)) {
-          // Find the token with this contract address to get the symbol
-          const token = availableTokens.find(t => t.contractAddress.toLowerCase() === contractAddress.toLowerCase());
-          if (token) {
-            newSymbolOverrides[token.symbol.toUpperCase()] = overrideValue as string | null;
-          } else {
-            console.warn(`No token found for contract address: ${contractAddress} in symbol overrides`);
-          }
-        }
-        
+      const result = await response.json();      if (response.ok) {
+        // Process symbol overrides - the API now returns them keyed by symbol already
+        const newSymbolOverrides: Record<string, string | null> = result.symbolOverrides || {};
         const newAddressOverrides: Record<string, string | null> = result.addressOverrides || {};
         
         console.log(`Loaded symbol overrides:`, newSymbolOverrides);
@@ -260,20 +246,15 @@
       editingAddress = null;
       editAddressCgId = '';
     }
-  }
-  // Remove override
-  async function removeOverride(type: 'symbol' | 'address', key: string) {
+  }  // Remove override
+  async function removeOverride(type: 'symbol' | 'address', key: string): Promise<boolean> {
     let contractAddress = '';
     
     if (type === 'symbol') {
-      // Find the contract address for this symbol
-      const token = availableTokens.find(t => t.symbol.toUpperCase() === key);
-      if (!token) {
-        console.error(`No token found for symbol: ${key}`);
-        return;
-      }
-      contractAddress = token.contractAddress;
-      console.log(`Removing symbol override for ${key} (contract: ${contractAddress})`);
+      // For symbol overrides, we don't need to find the contract address from availableTokens
+      // The API can handle symbol deletion by symbol name directly
+      console.log(`Removing symbol override for ${key}`);
+      contractAddress = ''; // Use empty string for symbol overrides
     } else {
       contractAddress = key;
       console.log(`Removing address override for ${contractAddress}`);
@@ -303,7 +284,9 @@
           coinGeckoId: null 
         });
       }
+      return true;
     }
+    return false;
   }
   
   // Cancel editing
@@ -313,6 +296,50 @@
     editSymbolCgId = '';
     editAddressCgId = '';
     searchQuery = '';
+  }
+
+  // Reset all symbol overrides
+  async function resetAllSymbolOverrides() {
+    if (!confirm('Are you sure you want to reset all symbol overrides? This action cannot be undone.')) {
+      return;
+    }
+
+    const symbolsToReset = Object.keys(symbolOverrides);
+    let successCount = 0;
+
+    for (const symbol of symbolsToReset) {
+      const success = await removeOverride('symbol', symbol);
+      if (success) successCount++;
+    }
+
+    if (successCount === symbolsToReset.length) {
+      console.log(`Successfully reset ${successCount} symbol overrides`);
+      dispatch('overridesChanged');
+    } else {
+      console.warn(`Only ${successCount}/${symbolsToReset.length} symbol overrides were reset`);
+    }
+  }
+
+  // Reset all address overrides
+  async function resetAllAddressOverrides() {
+    if (!confirm('Are you sure you want to reset all address overrides? This action cannot be undone.')) {
+      return;
+    }
+
+    const addressesToReset = Object.keys(addressOverrides);
+    let successCount = 0;
+
+    for (const address of addressesToReset) {
+      const success = await removeOverride('address', address);
+      if (success) successCount++;
+    }
+
+    if (successCount === addressesToReset.length) {
+      console.log(`Successfully reset ${successCount} address overrides`);
+      dispatch('overridesChanged');
+    } else {
+      console.warn(`Only ${successCount}/${addressesToReset.length} address overrides were reset`);
+    }
   }
   
   // Select coin from list
@@ -324,17 +351,46 @@
     }
     searchQuery = '';
   }
-    // Sort symbols and addresses, excluding null overrides to the bottom
+  // Sort symbols: active overrides first, then no overrides, then excluded (null) last
   $: sortedSymbols = uniqueSymbols.slice().sort((a, b) => {
+    const aHasOverride = symbolOverrides[a] !== undefined;
+    const bHasOverride = symbolOverrides[b] !== undefined;
     const aExcluded = symbolOverrides[a] === null;
     const bExcluded = symbolOverrides[b] === null;
-    if (aExcluded === bExcluded) return 0;
-    return aExcluded ? 1 : -1;
-  });  $: sortedAddresses = uniqueAddresses.slice().sort((a, b) => {
+    
+    // Active overrides (non-null) first
+    const aActive = aHasOverride && !aExcluded;
+    const bActive = bHasOverride && !bExcluded;
+    
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    
+    // Then excluded items go to bottom
+    if (aExcluded && !bExcluded) return 1;
+    if (!aExcluded && bExcluded) return -1;
+    
+    // Alphabetical within groups
+    return a.localeCompare(b);
+  });  // Sort addresses: active overrides first, then no overrides, then excluded (null) last
+  $: sortedAddresses = uniqueAddresses.slice().sort((a, b) => {
+    const aHasOverride = addressOverrides[a.address] !== undefined;
+    const bHasOverride = addressOverrides[b.address] !== undefined;
     const aExcluded = addressOverrides[a.address] === null;
     const bExcluded = addressOverrides[b.address] === null;
-    if (aExcluded === bExcluded) return 0;
-    return aExcluded ? 1 : -1;
+    
+    // Active overrides (non-null) first
+    const aActive = aHasOverride && !aExcluded;
+    const bActive = bHasOverride && !bExcluded;
+    
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    
+    // Then excluded items go to bottom
+    if (aExcluded && !bExcluded) return 1;
+    if (!aExcluded && bExcluded) return -1;
+    
+    // Alphabetical within groups
+    return a.symbol.localeCompare(b.symbol);
   });
 </script>
 
@@ -364,18 +420,27 @@
           </button>
         </div>
       </div>
-    </div>
-    {#if activeTab === 'symbols'}
+    </div>    {#if activeTab === 'symbols'}
     <div class="p-6">
       <div class="mb-6">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-xl">🏷️</span>
-          <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Symbol Overrides</h4>
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🏷️</span>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Symbol Overrides</h4>
+          </div>
+          <button
+            type="button"
+            on:click={resetAllSymbolOverrides}
+            class="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-1"
+            disabled={Object.keys(symbolOverrides).length === 0}
+          >
+            🗑️ Reset All Symbols
+          </button>
         </div>
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Override CoinGecko IDs for specific token symbols to ensure accurate price matching.
         </p>
-      </div>        <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+      </div><div class="space-y-3 max-h-96 overflow-y-auto pr-2">
         {#each sortedSymbols as symbol (symbol)}
           {@const hasOverride = symbolOverrides[symbol] !== undefined}
           {@const overrideValue = symbolOverrides[symbol]}
@@ -515,17 +580,26 @@
           </div>
         {/each}
       </div>
-    </div>
-  {:else}    <div class="p-6">
+    </div>  {:else}    <div class="p-6">
       <div class="mb-6">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-xl">📍</span>
-          <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Address Overrides</h4>
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📍</span>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Address Overrides</h4>
+          </div>
+          <button
+            type="button"
+            on:click={resetAllAddressOverrides}
+            class="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200 flex items-center gap-1"
+            disabled={Object.keys(addressOverrides).length === 0}
+          >
+            🗑️ Reset All Addresses
+          </button>
         </div>
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Override CoinGecko IDs for specific contract addresses when auto-detection fails.
         </p>
-      </div>        <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+      </div><div class="space-y-3 max-h-96 overflow-y-auto pr-2">
         {#each sortedAddresses as addressInfo (`${addressInfo.address}-${addressInfo.chain}`)}
           {@const address = addressInfo.address}
           {@const symbol = addressInfo.symbol}

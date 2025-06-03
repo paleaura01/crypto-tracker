@@ -5,12 +5,13 @@
   export let wallet: WalletData;
   export let globalPriceResponse: GlobalPriceResp | null;
   export let accentColor: string;
-
   $: sortedPortfolio = wallet.portfolio
     .filter(item => item.balance > 0)
     .sort((a, b) => b.value - a.value);
 
-  $: totalValue = sortedPortfolio.reduce((sum, item) => sum + item.value, 0);
+  $: totalValue = sortedPortfolio
+    .filter(item => !item.isOverrideExcluded)
+    .reduce((sum, item) => sum + item.value, 0);
   $: pricesLoaded = globalPriceResponse && typeof globalPriceResponse === 'object' && !('error' in globalPriceResponse);
 
   function formatBalance(balance: number): string {
@@ -65,9 +66,15 @@
       <div class="text-right">
         <div class="text-lg font-bold text-gray-900">
           {formatValue(totalValue)}
-        </div>
-        <div class="text-xs text-gray-500">
-          {sortedPortfolio.length} tokens • {[...new Set(sortedPortfolio.map(t => t.chain))].length} chains
+        </div>        <div class="text-xs text-gray-500">
+          {sortedPortfolio.filter(t => !t.isOverrideExcluded).length} priced
+          {#if sortedPortfolio.filter(t => t.hasActiveOverride && !t.isOverrideExcluded).length > 0}
+            • <span class="text-orange-600">{sortedPortfolio.filter(t => t.hasActiveOverride && !t.isOverrideExcluded).length} override</span>
+          {/if}
+          {#if sortedPortfolio.filter(t => t.isOverrideExcluded).length > 0}
+            • <span class="text-red-500">{sortedPortfolio.filter(t => t.isOverrideExcluded).length} excluded</span>
+          {/if}
+          • {[...new Set(sortedPortfolio.map(t => t.chain))].length} chains
         </div>
       </div>
     </div>
@@ -103,24 +110,35 @@
               >
                 {getChainIcon(token.chain || '')}
               </span>
-            </div>
-
-            <!-- Token details -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
+            </div>            <!-- Token details -->
+            <div class="flex-1 min-w-0">              <div class="flex items-center gap-2">
                 <span class="font-semibold text-gray-900 truncate">
                   {token.symbol}
                 </span>
-                {#if token.coinGeckoId}
+                {#if token.isOverrideExcluded}
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded">
+                    <span class="w-1 h-1 bg-red-500 rounded-full"></span>
+                    EXCLUDED
+                  </span>
+                {:else if token.hasActiveOverride}
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-700 rounded">
+                    <span class="w-1 h-1 bg-orange-500 rounded-full"></span>
+                    OVERRIDE
+                  </span>
+                {:else if token.coinGeckoId}
                   <span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
                     <span class="w-1 h-1 bg-blue-500 rounded-full"></span>
                     CG
                   </span>
                 {/if}
               </div>
-              
-              <div class="text-sm text-gray-500 truncate">
+                <div class="text-sm text-gray-500 truncate">
                 {formatBalance(token.balance)} {token.symbol}
+                {#if token.isOverrideExcluded}
+                  <span class="text-red-500 ml-1">(Excluded via {token.overrideType} override)</span>
+                {:else if token.hasActiveOverride}
+                  <span class="text-orange-600 ml-1">(Pricing via {token.overrideType} override)</span>
+                {/if}
               </div>
               
               {#if token.contractAddress}
@@ -129,11 +147,14 @@
                 </div>
               {/if}
             </div>
-          </div>
-
-          <!-- Value info -->
+          </div>          <!-- Value info -->
           <div class="text-right flex-shrink-0 ml-4">
-            {#if token.price > 0}
+            {#if token.isOverrideExcluded}
+              <div class="text-red-500">
+                <div class="font-medium">Excluded</div>
+                <div class="text-xs">Not priced</div>
+              </div>
+            {:else if token.price > 0}
               <div class="font-semibold text-gray-900">
                 {formatValue(token.value)}
               </div>
@@ -150,10 +171,8 @@
               </div>
             {/if}
           </div>
-        </div>
-
-        <!-- Progress bar for value representation -->
-        {#if token.value > 0 && totalValue > 0}
+        </div>        <!-- Progress bar for value representation -->
+        {#if !token.isOverrideExcluded && token.value > 0 && totalValue > 0}
           <div class="mt-3">
             <div class="w-full bg-gray-200 rounded-full h-1.5">
               <div 
@@ -178,17 +197,27 @@
       </div>
     {/if}
   </div>
-
   <!-- Holdings Footer -->
   {#if sortedPortfolio.length > 0}
     <div class="p-3 bg-gray-50 text-xs text-gray-500 border-t border-gray-100">
       <div class="flex items-center justify-between">
         <span>
           Last updated: {wallet.lastUpdated ? new Date(wallet.lastUpdated).toLocaleTimeString() : 'Never'}
-        </span>
-        <span>
-          {sortedPortfolio.filter(t => t.price > 0).length}/{sortedPortfolio.length} tokens priced
-        </span>
+        </span>        <div class="flex items-center gap-4">
+          <span>
+            {sortedPortfolio.filter(t => !t.isOverrideExcluded && t.price > 0).length}/{sortedPortfolio.filter(t => !t.isOverrideExcluded).length} tokens priced
+          </span>
+          {#if sortedPortfolio.filter(t => t.hasActiveOverride && !t.isOverrideExcluded).length > 0}
+            <span class="text-orange-600">
+              {sortedPortfolio.filter(t => t.hasActiveOverride && !t.isOverrideExcluded).length} with overrides
+            </span>
+          {/if}
+          {#if sortedPortfolio.filter(t => t.isOverrideExcluded).length > 0}
+            <span class="text-red-500">
+              {sortedPortfolio.filter(t => t.isOverrideExcluded).length} excluded
+            </span>
+          {/if}
+        </div>
       </div>
     </div>
   {/if}

@@ -59,29 +59,28 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
     if (error) {
       return json({ error: 'Failed to fetch overrides' }, { status: 500 });
-    }    // Transform to the format expected by the frontend
+    }
+
+    // Transform to the format expected by the frontend
     // Group by wallet address for wallet-specific response
     if (walletAddress) {
       const walletOverrides: Record<string, string | null> = {};
       const globalOverrides: Record<string, string | null> = {};
       const addressOverrides: Record<string, string | null> = {};
-      const symbolOverrides: Record<string, string | null> = {};
-
-      overrides.forEach(override => {
+      const symbolOverrides: Record<string, string | null> = {};      overrides.forEach(override => {
         const isGlobal = override.wallet_address === null;
         
-        if (override.override_type === 'coingecko_id') {
-          // Address overrides: key by contract address
+        if (override.override_type === 'address') {
           const key = override.contract_address;
           addressOverrides[key] = override.override_value;
           if (isGlobal) {
             globalOverrides[key] = override.override_value;
           } else {
             walletOverrides[key] = override.override_value;
-          }        } else if (override.override_type === 'symbol') {
-          // Symbol overrides: key by symbol name (from metadata) or fallback to contract address
-          const symbolName = override.metadata?.symbol || override.contract_address;
-          const key = symbolName;
+          }
+        } else if (override.override_type === 'symbol') {
+          // For symbol overrides, use the symbol as key, fall back to contract_address if symbol is null
+          const key = override.symbol || override.contract_address;
           symbolOverrides[key] = override.override_value;
           if (isGlobal) {
             globalOverrides[key] = override.override_value;
@@ -98,16 +97,12 @@ export const GET: RequestHandler = async ({ request, url }) => {
         global: globalOverrides,
         walletAddress
       });
-    } else {// Return all overrides grouped by wallet
+    } else {      // Return all overrides grouped by wallet
       const walletGroups: Record<string, { addressOverrides: Record<string, string | null>, symbolOverrides: Record<string, string | null> }> = {};
       const globalOverrides: { addressOverrides: Record<string, string | null>, symbolOverrides: Record<string, string | null> } = { 
         addressOverrides: {}, 
         symbolOverrides: {} 
       };      overrides.forEach(override => {
-        // For symbol overrides, use symbol name from metadata; for address overrides, use contract address
-        const key = override.override_type === 'symbol' 
-          ? (override.metadata?.symbol || override.contract_address)
-          : override.contract_address;
         const walletAddr = override.wallet_address || 'global';
         
         if (!walletGroups[walletAddr]) {
@@ -115,12 +110,15 @@ export const GET: RequestHandler = async ({ request, url }) => {
         }
 
         if (override.override_type === 'address') {
+          const key = override.contract_address;
           if (walletAddr === 'global') {
             globalOverrides.addressOverrides[key] = override.override_value;
           } else {
             walletGroups[walletAddr].addressOverrides[key] = override.override_value;
           }
         } else if (override.override_type === 'symbol') {
+          // For symbol overrides, use the symbol as key, fall back to contract_address if symbol is null
+          const key = override.symbol || override.contract_address;
           if (walletAddr === 'global') {
             globalOverrides.symbolOverrides[key] = override.override_value;
           } else {
@@ -177,27 +175,31 @@ export const POST: RequestHandler = async ({ request }) => {
       walletAddress = null, // New: wallet-specific override
       walletId = null,      // New: reference to wallets table
       action = 'upsert',    // New: operation type (upsert, delete, bulk_delete)
-      symbol = null,        // New: symbol name for symbol overrides
+      symbol = null         // New: symbol name for symbol overrides
     } = await request.json();
 
-    if (!contractAddress || !overrideType) {
-      return json({ error: 'Missing required fields' }, { status: 400 });
+    // Validate action type first
+    if (!['upsert', 'delete', 'bulk_delete'].includes(action)) {
+      return json({ error: 'Invalid action type' }, { status: 400 });
     }
 
-    if (!['address', 'symbol'].includes(overrideType)) {
-      return json({ error: 'Invalid override type' }, { status: 400 });
-    }    if (!['upsert', 'delete', 'bulk_delete'].includes(action)) {
-      return json({ error: 'Invalid action type' }, { status: 400 });
-    }// Handle bulk delete operation (remove all overrides for a wallet)
+    // Handle bulk delete operation (remove all overrides for a wallet)
     if (action === 'bulk_delete') {
       if (!walletAddress) {
         return json({ error: 'Wallet address required for bulk delete' }, { status: 400 });
-      }      // Hard delete all overrides for this wallet using the authenticated client
+      }
+
+      // Soft delete all overrides for this wallet using the authenticated client
       const { error: bulkDeleteError } = await userSupabase
         .from('token_overrides')
-        .delete()
+        .update({ 
+          is_active: false,
+          action: 'delete',
+          updated_at: new Date().toISOString()
+        })
         .eq('user_id', user.id)
-        .eq('wallet_address', walletAddress);
+        .eq('wallet_address', walletAddress)
+        .eq('is_active', true);
 
       if (bulkDeleteError) {
         return json({ error: 'Failed to bulk delete overrides' }, { status: 500 });
@@ -208,21 +210,51 @@ export const POST: RequestHandler = async ({ request }) => {
 
       return json({ 
         success: true, 
-        message: `All overrides removed for wallet ${walletAddress}`,
-        action: 'bulk_delete'
+        action: 'bulk_delete',
+        message: `All overrides removed for wallet ${walletAddress}`
       });
-    }    // Handle explicit delete operation
+    }
+
+    // For non-bulk operations, validate override type
+    if (!overrideType) {
+      return json({ error: 'Missing override type' }, { status: 400 });
+    }
+
+    if (!['address', 'symbol'].includes(overrideType)) {
+      return json({ error: 'Invalid override type' }, { status: 400 });
+    }
+
+    // For symbol overrides, require either symbol or contractAddress to be valid
+    if (overrideType === 'symbol' && !symbol && !contractAddress) {
+      return json({ error: 'Symbol name or contract address required for symbol overrides' }, { status: 400 });
+    }    // For address overrides, require contractAddress
+    if (overrideType === 'address' && !contractAddress) {
+      return json({ error: 'Contract address required for address overrides' }, { status: 400 });
+    }
+
+    // Handle explicit delete operation
     if (action === 'delete') {
-      // Find the existing override to soft delete using the authenticated client
-      const { data: existingOverride, error: findError } = await userSupabase
+      // Build the query for finding the existing override
+      let findQuery = userSupabase
         .from('token_overrides')
         .select('*')
         .eq('user_id', user.id)
-        .eq('contract_address', contractAddress)
-        .eq('chain', chain)
         .eq('override_type', overrideType)
-        .eq('is_active', true)
-        .maybeSingle();
+        .eq('is_active', true);
+
+      // For symbol overrides, search by symbol if provided, otherwise by contract_address
+      if (overrideType === 'symbol') {
+        if (symbol) {
+          findQuery = findQuery.eq('symbol', symbol);
+        } else {
+          findQuery = findQuery.eq('contract_address', contractAddress);
+        }
+      } else {
+        // For address overrides, always use contract_address
+        findQuery = findQuery.eq('contract_address', contractAddress).eq('chain', chain);
+      }
+
+      const { data: existingOverride, error: findError } = await findQuery.maybeSingle();
 
       if (findError) {
         return json({ error: 'Failed to find override' }, { status: 500 });
@@ -233,10 +265,16 @@ export const POST: RequestHandler = async ({ request }) => {
         const overrideWalletAddr = existingOverride.wallet_address;
         if (walletAddress !== overrideWalletAddr) {
           return json({ error: 'Override not found for specified wallet' }, { status: 404 });
-        }        // Hard delete the override using the authenticated client
+        }
+
+        // Soft delete the override using the authenticated client
         const { error } = await userSupabase
           .from('token_overrides')
-          .delete()
+          .update({ 
+            is_active: false,
+            action: 'delete',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', existingOverride.id);
 
         if (error) {
@@ -248,8 +286,8 @@ export const POST: RequestHandler = async ({ request }) => {
       }
 
       return json({ success: true, action: 'delete' });
-    }    // Handle upsert operation
-    const overrideData: { [key: string]: unknown } = {
+    }// Handle upsert operation
+    const overrideData = {
       user_id: user.id,
       contract_address: contractAddress,
       chain,
@@ -257,21 +295,47 @@ export const POST: RequestHandler = async ({ request }) => {
       override_value: overrideValue,
       wallet_address: walletAddress,
       wallet_id: walletId,
+      symbol: overrideType === 'symbol' ? symbol : null, // Include symbol for symbol overrides
       action: 'create', // Use 'create' instead of 'upsert' for new records
-      updated_at: new Date().toISOString(),      metadata: {
+      updated_at: new Date().toISOString(),
+      metadata: {
         created_via: 'api',
-        user_agent: request.headers.get('user-agent') || 'unknown',
-        ...(overrideType === 'symbol' && symbol ? { symbol: symbol.toUpperCase() } : {})
+        user_agent: request.headers.get('user-agent') || 'unknown'
       }
-    };    // First, hard delete any existing override using the authenticated client
-    await userSupabase
+    };
+
+    // Build the soft delete query based on override type
+    let softDeleteQuery = userSupabase
       .from('token_overrides')
-      .delete()
+      .update({ 
+        is_active: false,
+        action: 'update',
+        updated_at: new Date().toISOString()
+      })
       .eq('user_id', user.id)
-      .eq('contract_address', contractAddress)
-      .eq('chain', chain)
       .eq('override_type', overrideType)
-      .or(walletAddress ? `wallet_address.eq.${walletAddress}` : 'wallet_address.is.null');
+      .eq('is_active', true);
+
+    // For symbol overrides, match by symbol if provided, otherwise by contract_address
+    if (overrideType === 'symbol') {
+      if (symbol) {
+        softDeleteQuery = softDeleteQuery.eq('symbol', symbol);
+      } else {
+        softDeleteQuery = softDeleteQuery.eq('contract_address', contractAddress);
+      }
+    } else {
+      // For address overrides, match by contract_address and chain
+      softDeleteQuery = softDeleteQuery.eq('contract_address', contractAddress).eq('chain', chain);
+    }
+
+    // Apply wallet address filter properly
+    if (walletAddress) {
+      softDeleteQuery = softDeleteQuery.eq('wallet_address', walletAddress);
+    } else {
+      softDeleteQuery = softDeleteQuery.is('wallet_address', null);
+    }
+    
+    await softDeleteQuery;
 
     // Insert new override using the authenticated client
     const { data, error } = await userSupabase

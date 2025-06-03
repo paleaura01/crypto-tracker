@@ -31,15 +31,18 @@ export default defineConfig({
         '**/coverage/**'
       ]
     }
-  },
-  resolve: {
+  },  resolve: {
     alias: {
       $lib: resolve(__dirname, './src/lib'),
       $types: resolve(__dirname, './src/lib/types'),
       $services: resolve(__dirname, './src/lib/services'),
       $utils: resolve(__dirname, './src/lib/utils'),
       $components: resolve(__dirname, './src/lib/components'),
-      $stores: resolve(__dirname, './src/lib/stores')
+      $stores: resolve(__dirname, './src/lib/stores'),
+      '$env/static/public': resolve(__dirname, './src/test/mocks/env-static-public.ts'),
+      '$env/static/private': resolve(__dirname, './src/test/mocks/env-static-private.ts'),
+      '$env/dynamic/public': resolve(__dirname, './src/test/mocks/env-dynamic-public.ts'),
+      '$env/dynamic/private': resolve(__dirname, './src/test/mocks/env-dynamic-private.ts')
     }
   }
 });

@@ -19,6 +19,9 @@ export interface PortfolioItem {
   contractAddress?: string;
   chain?: string;
   coinGeckoId?: string | null;
+  isOverrideExcluded?: boolean; // Whether this token is excluded from pricing via override
+  overrideType?: 'symbol' | 'address' | null; // Type of override applied
+  hasActiveOverride?: boolean; // Whether this token has a non-null override applied
 }
 
 export interface PortfolioDisplayProps {

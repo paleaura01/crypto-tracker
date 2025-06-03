@@ -32,15 +32,6 @@ vi.mock('$app/stores', () => ({
   }
 }));
 
-// Mock environment variables
-vi.mock('$env/dynamic/private', () => ({}));
-vi.mock('$env/dynamic/public', () => ({}));
-vi.mock('$env/static/private', () => ({}));
-vi.mock('$env/static/public', () => ({
-  PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-  PUBLIC_SUPABASE_ANON_KEY: 'test-key'
-}));
-
 // Global test utilities
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
